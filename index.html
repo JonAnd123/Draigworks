@@ -1059,14 +1059,14 @@ footer{border-top:1px solid var(--line);padding-block:64px 40px;background:var(-
     io.observe(document.getElementById('top'));io.observe(document.getElementById('contact'));
   }
 
-  // Contact delivery. All messages go to TO_EMAIL.
-  // FORM_ENDPOINT: paste a form-to-email endpoint (e.g. a Formspree or Web3Forms URL set to
-  // forward to TO_EMAIL) for direct sending. Left empty, the form opens the visitor's email app
-  // with the message pre-filled and addressed to TO_EMAIL.
+  // Contact delivery. Messages are posted to FormSubmit, which emails them to TO_EMAIL.
+  // First live submission: FormSubmit sends an activation email to TO_EMAIL. Click the link
+  // in it once, and every message after that is delivered straight to the inbox.
   var TO_EMAIL='solutions@draigworks.uk';
-  var FORM_ENDPOINT='';
+  var FORM_ENDPOINT='https://formsubmit.co/ajax/'+TO_EMAIL;
 
   var box=document.getElementById('sentMsg'),boxText=document.getElementById('sentText'),btn=form.querySelector('button[type=submit]');
+  function esc(t){return String(t).replace(/[&<>"]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];});}
   function show(html,warn){boxText.innerHTML=html;box.classList.toggle('warn',!!warn);box.hidden=false;}
 
   document.getElementById('copyMail').addEventListener('click',function(){
@@ -1087,19 +1087,20 @@ footer{border-top:1px solid var(--line);padding-block:64px 40px;background:var(-
            package:pkgField.hidden?'':pkg.value,message:form.message.value.trim()};
     var subject='New enquiry: '+d.need+(d.package?' ('+d.package+')':'')+' from '+d.name;
     var body='Name: '+d.name+'\nEmail: '+d.email+'\nNeed: '+d.need+(d.package?'\nPackage: '+d.package:'')+'\n\n'+d.message;
+    var mailto='mailto:'+TO_EMAIL+'?subject='+encodeURIComponent(subject)+'&body='+encodeURIComponent(body);
 
-    if(FORM_ENDPOINT){
-      btn.disabled=true;
-      fetch(FORM_ENDPOINT,{method:'POST',headers:{'Content-Type':'application/json','Accept':'application/json'},
-        body:JSON.stringify({_subject:subject,_replyto:d.email,to:TO_EMAIL,name:d.name,email:d.email,need:d.need,package:d.package,message:d.message})})
-      .then(function(r){if(!r.ok)throw new Error(r.status);
-        show('<b>Message sent.</b> Thanks, '+d.name.replace(/[<>&]/g,'')+'. We will reply to '+d.email.replace(/[<>&]/g,'')+' soon.');form.reset();syncPkg();})
-      .catch(function(){show('<b>That did not go through.</b> Please email us directly at '+TO_EMAIL+' and we will pick it up from there.',true);})
-      .then(function(){btn.disabled=false;});
-    }else{
-      location.href='mailto:'+TO_EMAIL+'?subject='+encodeURIComponent(subject)+'&body='+encodeURIComponent(body);
-      show('<b>Your email app should open</b> with your message ready to send. If it did not, email us at '+TO_EMAIL+'.');
-    }
+    btn.disabled=true;btn.firstChild.nodeValue='Sending… ';
+    fetch(FORM_ENDPOINT,{method:'POST',headers:{'Content-Type':'application/json','Accept':'application/json'},
+      body:JSON.stringify({_subject:subject,_replyto:d.email,_template:'table',_captcha:'false',
+        Name:d.name,Email:d.email,Need:d.need,Package:d.package||'Not specified',Message:d.message})})
+    .then(function(r){return r.json().catch(function(){return{};}).then(function(j){
+        if(!r.ok||j.success===false||j.success==='false')throw new Error(j.message||r.status);}); })
+    .then(function(){
+        show('<b>Message sent.</b> Thanks, '+esc(d.name)+'. We will reply to '+esc(d.email)+' soon.');
+        form.reset();syncPkg();})
+    .catch(function(){
+        show('<b>That did not go through.</b> Please <a href="'+mailto+'" style="color:inherit;text-decoration:underline">email us instead</a>, or write to '+TO_EMAIL+'. Your message is still in the form.',true);})
+    .then(function(){btn.disabled=false;btn.firstChild.nodeValue='Send message ';});
   });
 })();
 </script>

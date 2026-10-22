@@ -8,6 +8,6 @@
    row-level-security rules in 01_schema.sql. NEVER paste the service_role key.
    ========================================================================== */
 window.CC_CONFIG = {
-  SUPABASE_URL: "",
-  SUPABASE_ANON_KEY: ""
+  SUPABASE_URL: "https://tpeumhwzzoiqmgrjpsyu.supabase.co",
+  SUPABASE_ANON_KEY: "sb_publishable_rQJ0zNxAQA2REp7J5SflJw_ai6cv17B"
 };

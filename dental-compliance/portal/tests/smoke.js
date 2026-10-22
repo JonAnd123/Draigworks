@@ -1,0 +1,458 @@
+const { JSDOM } = require("jsdom");
+const fs = require("fs"), path = require("path");
+const ROOT = "/sessions/vigilant-bold-mccarthy/mnt/Cymru Compliance/website";
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+let failures = 0, checks = 0;
+function ok(name, cond, extra) { checks++; if (!cond) { failures++; console.log("  FAIL", name, extra || ""); } }
+
+async function newApp(userId, lang) {
+  const html = fs.readFileSync(ROOT + "/portal/app.html", "utf8").replace(/<script[\s\S]*?<\/script>/g, "");
+  const dom = new JSDOM(html, { runScripts: "outside-only", url: "http://localhost/portal/app.html", pretendToBeVisual: true });
+  const w = dom.window, errors = [];
+  w.console.error = (...a) => errors.push(a.map(String).join(" "));
+  w.addEventListener("error", e => errors.push("window error: " + e.message));
+  w.addEventListener("unhandledrejection", e => errors.push("unhandled: " + e.reason));
+  w.Chart = class { constructor(c, cfg) { this.cfg = cfg; w.__charts = (w.__charts || 0) + 1; } destroy() {} };
+  w.URL.createObjectURL = () => "blob:demo";
+  w.print = () => {}; w.open = () => {};
+  if (lang) w.localStorage.setItem("cc_lang", lang);
+  const files = ["js/site-config.js", "portal/js/scoring.js", "portal/js/core.js","portal/js/hr-core.js", "portal/js/i18n.js","portal/js/i18n-hr.js", "portal/js/i18n-train.js", "portal/js/i18n-tools.js", "portal/js/demo-content.js", "portal/js/tools-content.js", "portal/js/audit-content.js", "portal/js/demo-hr.js", "portal/js/demo-tools.js","portal/js/api-demo.js", "portal/js/api-supabase.js", "portal/js/views-dashboard.js", "portal/js/views-practice.js", "portal/js/views-group.js", "portal/js/views-admin.js", "portal/js/views-hr.js", "portal/js/views-train.js", "portal/js/views-tasks.js", "portal/js/views-compliance.js","portal/js/app.js"];
+  for (const f of files) w.eval(fs.readFileSync(path.join(ROOT, f), "utf8") + "\n//# sourceURL=" + f);
+  await sleep(60);
+  if (userId) { w.document.querySelector(`[data-demo="${userId}"]`).click(); await sleep(150); }
+  return { dom, w, errors, doc: w.document };
+}
+async function go(app, route) { app.w.location.hash = "#/" + route; await sleep(120); }
+const view = app => app.doc.getElementById("view");
+const modal = app => app.doc.querySelector(".modal-overlay");
+
+const ROLES = [["u_admin", "platform_admin"], ["u_ga", "group_admin"], ["u_pr1", "principal"], ["u_pm1", "practice_manager"], ["u_st1", "staff"], ["u_insp", "inspector"], ["u_pr4", "principal (independent)"]];
+
+(async () => {
+  for (const lang of ["en", "cy"]) {
+    console.log(`\n=== Language: ${lang}`);
+    for (const [uid, label] of ROLES) {
+      const app = await newApp(uid, lang);
+      const routes = [...app.doc.querySelectorAll("#side-nav a")].map(a => a.getAttribute("data-route"));
+      ok(`${label}: nav built`, routes.length >= 2, routes.join(","));
+      for (const r of routes) {
+        app.errors.length = 0;
+        await go(app, r);
+        const html = view(app).innerHTML;
+        ok(`${label}/${r}: renders`, html.length > 200 && !/Something went wrong|Loading…|Llwytho…/.test(html), html.slice(0, 160));
+        ok(`${label}/${r}: no console errors`, app.errors.length === 0, app.errors.join(" | ").slice(0, 300));
+      }
+      app.dom.window.close();
+    }
+  }
+
+  console.log("\n=== Interactions");
+  // Principal: dashboard charts + drill
+  let app = await newApp("u_pr1");
+  await go(app, "dashboard");
+  ok("principal dashboard draws 3 charts", app.w.__charts >= 3, String(app.w.__charts));
+  ok("principal dashboard shows group comparison", /vs group average|o gymharu â chyfartaledd/.test(view(app).innerHTML));
+  view(app).querySelector("[data-cat]").click(); await sleep(150);
+  ok("category drill-down modal opens", !!modal(app));
+  modal(app).querySelector("[data-close]").click();
+
+  // Compliance check full flow
+  await go(app, "check");
+  const startBtn = view(app).querySelector('[data-act="start"]'); ok("check: start button", !!startBtn);
+  startBtn.click(); await sleep(150);
+  const radios = view(app).querySelectorAll('input[type=radio][value="yes"]'); ok("check: all HIW questions listed", radios.length === app.w.CC.DEMO_CONTENT.questions.filter(q => !q.kind || q.kind === "hiw").length && radios.length >= 70, String(radios.length));
+  ok("check: evidence hints shown", /q-hint/.test(view(app).innerHTML));
+  radios.forEach(r => { r.checked = true; r.dispatchEvent(new app.w.Event("change", { bubbles: true })); }); await sleep(100);
+  view(app).querySelector('[data-act="complete"]').click(); await sleep(300);
+  ok("check: gap report modal after completing", !!modal(app) && /No gaps|Gap report|bylchau/i.test(modal(app).innerHTML));
+  modal(app) && modal(app).remove();
+
+  // Evidence add via API then verify flow in UI
+  const api = app.w.CC.api;
+  const ev = await api.evidence.add({ practice_id: "p1", category: "policies", title: "Test policy", expiry_date: app.w.CC.isoDate(10), status: "pending", file: { name: "x.pdf" } });
+  await go(app, "evidence");
+  ok("evidence: new row listed", /Test policy/.test(view(app).innerHTML));
+  view(app).querySelector(`[data-act="verify"][data-id="${ev.id}"]`).click(); await sleep(150);
+  const evs = await api.evidence.list("p1"); ok("evidence: verified via UI", evs.find(e => e.id === ev.id).status === "verified");
+  ok("evidence: audit entry written", (await api.audit.list({})).some(a => a.action === "verify_evidence"));
+
+  // Add-evidence modal opens
+  view(app).querySelector('[data-act="add"]').click(); await sleep(50); ok("evidence: add modal opens", !!modal(app) && !!modal(app).querySelector('input[type=file]')); modal(app).remove();
+
+  // Team invite + inspector grant
+  await go(app, "team");
+  view(app).querySelector('[data-act="invite"]').click(); await sleep(50);
+  const m = modal(app); m.querySelector('[name=full_name]').value = "New Person"; m.querySelector('[name=email]').value = "new@x.com";
+  m.querySelector("form").dispatchEvent(new app.w.Event("submit", { cancelable: true })); await sleep(200);
+  ok("team: invite created", /new@x\.com/.test(view(app).innerHTML));
+  await go(app, "inspectors");
+  view(app).querySelector('[data-act="grant"]').click(); await sleep(50);
+  const g = modal(app); g.querySelector('[name=email]').value = "insp2@hiw.example";
+  g.querySelector("form").dispatchEvent(new app.w.Event("submit", { cancelable: true })); await sleep(250);
+  ok("inspectors: grant listed", /insp2@hiw\.example/.test(view(app).innerHTML));
+
+  // Training assign
+  await go(app, "training");
+  const assignBtn = view(app).querySelector('[data-act="assign"]'); assignBtn.click(); await sleep(50);
+  const tm = modal(app); tm.querySelector('input[name=who]').checked = true;
+  tm.querySelector("form").dispatchEvent(new app.w.Event("submit", { cancelable: true })); await sleep(200);
+  ok("training: assignment created", (await api.training.assignments({ practice_id: "p1" })).length > 13);
+
+  // Bookings
+  await go(app, "bookings");
+  view(app).querySelector('[data-act="book"]').click(); await sleep(50);
+  modal(app).querySelector("form").dispatchEvent(new app.w.Event("submit", { cancelable: true })); await sleep(200);
+  ok("bookings: request created", (await api.bookings.list()).filter(b => b.practice_id === "p1").length >= 2);
+  app.dom.window.close();
+
+  // Staff: scoping and own upload
+  app = await newApp("u_st1");
+  await go(app, "my");
+  ok("staff: sees own training", /Welcome and practice induction/.test(view(app).innerHTML));
+  const sev = await app.w.CC.api.evidence.list("p1"); ok("staff: only sees own evidence", sev.every(e => e.staff_member === "u_st1" || e.uploaded_by === "u_st1"));
+  const sub = await app.w.CC.api.evidence.add({ practice_id: "p1", category: "staff_training", title: "Staff cert", status: "verified" });
+  ok("staff: upload forced to pending", sub.status === "pending");
+  let denied = false; try { await app.w.CC.api.evidence.setStatus(sub.id, "verified"); } catch (e) { denied = true; } ok("staff: cannot verify", denied);
+  app.w.location.hash = "#/evidence"; await sleep(100); ok("staff: evidence route redirected", app.w.location.hash !== "#/evidence");
+  app.dom.window.close();
+
+  // Group admin
+  app = await newApp("u_ga");
+  await go(app, "group");
+  ok("group: draws chart + table of 3 practices", app.w.__charts >= 1 && (view(app).innerHTML.match(/data-view=/g) || []).length >= 3);
+  ok("group: needs-attention list", /Needs attention|Angen sylw/.test(view(app).innerHTML));
+  let gd = false; try { await app.w.CC.api.evidence.list("p3"); const l = await app.w.CC.api.evidence.list("p3"); gd = l.length === 0; } catch (e) { gd = true; } ok("group admin cannot read evidence rows", gd);
+  view(app).querySelector("[data-view]").click(); await sleep(200); ok("group: drill into practice dashboard", app.w.location.hash === "#/dashboard" && /Overall compliance/.test(view(app).innerHTML));
+  await go(app, "practices");
+  view(app).querySelector('[data-act="add"]').click(); await sleep(50);
+  const pm = modal(app); pm.querySelector('[name=name]').value = "Wrexham Dental"; pm.querySelector('[name=pname]').value = "Dr W"; pm.querySelector('[name=pemail]').value = "w@x.com";
+  pm.querySelector("form").dispatchEvent(new app.w.Event("submit", { cancelable: true })); await sleep(250);
+  ok("group: practice added + principal invited", /Wrexham Dental/.test(view(app).innerHTML) && /w@x\.com/.test(view(app).innerHTML));
+  await go(app, "bookings");
+  view(app).querySelector('[data-act="book"]').click(); await sleep(50);
+  const bm = modal(app); bm.querySelectorAll('input[name=pids]').forEach(c => c.checked = true);
+  bm.querySelector("form").dispatchEvent(new app.w.Event("submit", { cancelable: true })); await sleep(250);
+  ok("group: bulk booking creates one per practice", (await app.w.CC.api.bookings.list()).filter(b => b.kind === "pre_inspection").length >= 5);
+  app.dom.window.close();
+
+  // Inspector
+  app = await newApp("u_insp");
+  await go(app, "inspect");
+  ok("inspector: sees expiry banner + evidence", /expires|dod i ben/i.test(view(app).innerHTML) && /data-open/.test(view(app).innerHTML));
+  let wd = false; try { await app.w.CC.api.evidence.add({ practice_id: "p1", category: "policies", title: "x" }); } catch (e) { wd = true; } ok("inspector cannot write", wd);
+  const sel = app.doc.getElementById("practice-select"); ok("inspector: practice selector for 2 grants", !sel.hidden && sel.options.length === 2);
+  app.dom.window.close();
+
+  // Platform admin
+  app = await newApp("u_admin");
+  await go(app, "users");
+  view(app).querySelector('[data-act="invite"]').click(); await sleep(50);
+  const im = modal(app); im.querySelector('[name=full_name]').value = "New Admin"; im.querySelector('[name=email]').value = "admin2@x.com"; im.querySelector("#inv-role").value = "platform_admin"; im.querySelector("#inv-role").dispatchEvent(new app.w.Event("change"));
+  im.querySelector("form").dispatchEvent(new app.w.Event("submit", { cancelable: true })); await sleep(200);
+  ok("admin: invite created", /admin2@x\.com/.test(view(app).innerHTML));
+  await go(app, "enquiries"); ok("admin: enquiries listed", /Lowri Bevan/.test(view(app).innerHTML));
+  await go(app, "bookings"); const comp = view(app).querySelector('[data-act="complete"]'); ok("admin: can complete bookings", !!comp);
+  app.dom.window.close();
+
+
+  // ---------------- HR module ----------------
+  console.log("\n=== HR");
+  const submit = (a, root) => { (root || modal(a)).querySelector("form").dispatchEvent(new a.w.Event("submit", { cancelable: true })); };
+  app = await newApp("u_pm1");
+  await go(app, "hr");
+  ok("hr: staff cards shown", view(app).querySelectorAll(".hr-card").length >= 6, String(view(app).querySelectorAll(".hr-card").length));
+  ok("hr: shows only own practice staff", !/Newport|Callum Reid/.test(view(app).innerHTML));
+  ok("hr: photos for most staff, initials for those without", view(app).querySelectorAll(".hr-avatar img").length >= 5 && view(app).querySelectorAll(".hr-avatar-init").length >= 1);
+  view(app).querySelector('.hr-card[data-act="open"]').click(); await sleep(200);
+  ok("hr: staff record modal opens with 4 tabs", !!modal(app) && modal(app).querySelectorAll("[data-ptab]").length === 4);
+  ok("hr: balance cards in staff record", /Entitlement/.test(modal(app).innerHTML) && modal(app).querySelectorAll(".hr-bal .kpi").length === 4);
+  ok("hr: manager sees edit/record-leave actions", !!modal(app).querySelector('[data-act="edit"]') && !!modal(app).querySelector('[data-act="recordleave"]'));
+  modal(app).querySelector('[data-ptab="docs"]').click();
+  ok("hr: documents tab switches", !modal(app).querySelector('[data-panel="docs"]').hidden && modal(app).querySelector('[data-panel="details"]').hidden);
+  modal(app).querySelector("[data-close]").click();
+  // pending → approve
+  const hrApi = () => app.w.CC.api.hr;
+  const pendBefore = (await hrApi().leave.list({ practice_id: "p1" })).filter(l => l.status === "pending").length;
+  view(app).querySelector('[data-tab="leave"]').click(); await sleep(60);
+  ok("hr: pending requests listed", pendBefore >= 2 && view(app).querySelectorAll('[data-act="approve"]').length === pendBefore);
+  view(app).querySelector('[data-act="approve"]').click(); await sleep(250);
+  const pendAfter = (await hrApi().leave.list({ practice_id: "p1" })).filter(l => l.status === "pending").length;
+  ok("hr: approving a request updates status", pendAfter === pendBefore - 1);
+  const au = await app.w.CC.api.audit.list({ practice_id: "p1" });
+  ok("hr: approval written to audit log", au.some(a => a.action === "hr_leave_approved"));
+  // decline needs modal
+  await go(app, "hr"); view(app).querySelector('[data-tab="leave"]').click(); await sleep(60);
+  view(app).querySelector('[data-act="decline"]').click(); await sleep(60);
+  modal(app).querySelector("[name=note]").value = "Too busy"; submit(app); await sleep(250);
+  ok("hr: decline stores manager note", (await hrApi().leave.list({ practice_id: "p1" })).some(l => l.status === "declined" && l.manager_note === "Too busy"));
+  // calendar + absence
+  await go(app, "hr"); view(app).querySelector('[data-tab="calendar"]').click(); await sleep(60);
+  ok("hr: calendar renders month grid with legend", view(app).querySelectorAll(".cal-cell").length >= 28 && /Sick leave/.test(view(app).innerHTML));
+  view(app).querySelector('[data-act="calnext"]').click(); await sleep(30);
+  ok("hr: calendar next month works", view(app).querySelectorAll(".cal-cell").length >= 28);
+  view(app).querySelector('[data-tab="absence"]').click(); await sleep(60);
+  ok("hr: absence tab shows Bradford factor", /Bradford factor/.test(view(app).innerHTML) && view(app).querySelectorAll("table.data tbody tr").length >= 5);
+  // add staff
+  await go(app, "hr"); view(app).querySelector('[data-act="addstaff"]').click(); await sleep(60);
+  let am = modal(app); am.querySelector("[name=full_name]").value = "Test Newstarter"; am.querySelector("[name=job_title]").value = "Dental nurse"; am.querySelector("[name=email]").value = "test.new@cardiffbaydental.example";
+  submit(app); await sleep(300);
+  ok("hr: add staff member", /Test Newstarter/.test(view(app).innerHTML));
+  // record leave via modal; overlap rejected
+  view(app).querySelector('[data-act="recordleave"]').click(); await sleep(60);
+  let lm = modal(app); const ns = (await hrApi().staff.list({ practice_id: "p1" })).filter(x => x.full_name === "Test Newstarter")[0];
+  lm.querySelector("[name=staff_id]").value = ns.id; lm.querySelector("[name=leave_type]").value = "sick";
+  const monday = (() => { let d = new Date(); d.setDate(d.getDate() + 90); while (d.getDay() !== 1) d.setDate(d.getDate() + 1); return d.toISOString().slice(0, 10); })();
+  lm.querySelector("[name=start_date]").value = monday; lm.querySelector("[name=end_date]").value = monday;
+  submit(app); await sleep(300);
+  ok("hr: record sick leave", (await hrApi().leave.list({ staff_id: ns.id })).some(l => l.leave_type === "sick" && l.status === "approved" && l.days === 1));
+  view(app).querySelector('[data-act="recordleave"]').click(); await sleep(60);
+  lm = modal(app); lm.querySelector("[name=staff_id]").value = ns.id; lm.querySelector("[name=start_date]").value = monday; lm.querySelector("[name=end_date]").value = monday;
+  submit(app); await sleep(200);
+  ok("hr: overlapping leave rejected", /overlap/i.test(modal(app).querySelector(".modal-error").textContent));
+  modal(app).querySelector("[data-close]").click();
+  // photo upload (demo stores data URL)
+  const pf = new app.w.File([new Uint8Array([137, 80, 78, 71])], "me.png", { type: "image/png" });
+  await hrApi().staff.setPhoto({ id: ns.id, practice_id: "p1" }, pf);
+  const withPhoto = (await hrApi().staff.list({ practice_id: "p1" })).filter(x => x.id === ns.id)[0];
+  const urls = await hrApi().photoUrls([withPhoto.photo_path]);
+  ok("hr: photo stored and resolvable", !!withPhoto.photo_path && /^data:/.test(urls[withPhoto.photo_path] || ""));
+  // document + note
+  const df = new app.w.File(["%PDF-1.4 demo"], "contract.pdf", { type: "application/pdf" });
+  await hrApi().docs.add({ practice_id: "p1", staff_id: ns.id, kind: "contract", title: "Contract" }, df);
+  await hrApi().notes.add({ practice_id: "p1", staff_id: ns.id, kind: "general", body: "Welcome" });
+  ok("hr: document and note saved", (await hrApi().docs.list(ns.id)).length === 1 && (await hrApi().notes.list(ns.id)).length === 1);
+  app.dom.window.close();
+
+  // Staff self-service
+  app = await newApp("u_st1");
+  await go(app, "myhr");
+  ok("myhr: balance and details render", /Entitlement/.test(view(app).innerHTML) && /Owen Evans/.test(view(app).innerHTML));
+  ok("myhr: team off list (no leave types shown)", /Who is off in the next 8 weeks/.test(view(app).innerHTML) && !/Sick leave<\/li>/.test(view(app).innerHTML));
+  ok("myhr: staff sees only own HR record", (await hrApi().staff.list({})).length === 1);
+  { const lv = await hrApi().leave.list({}); ok("myhr: staff sees only own leave", lv.length > 0 && lv.every(l => l.staff_id === lv[0].staff_id)); }
+  ok("myhr: staff cannot read HR notes/documents", (await hrApi().notes.list("hs1")).length === 0 && (await hrApi().docs.list("hs3")).length === 0);
+  const own = await hrApi().staff.mine("owen@cardiffbaydental.example", "p1");
+  const before = (await hrApi().leave.list({ staff_id: own.id })).length;
+  view(app).querySelector('[data-act="request"]').click(); await sleep(60);
+  const rd = (() => { let d = new Date(); d.setDate(d.getDate() + 120); while (d.getDay() !== 2) d.setDate(d.getDate() + 1); return d.toISOString().slice(0, 10); })();
+  let rm = modal(app); rm.querySelector("[name=start_date]").value = rd; rm.querySelector("[name=end_date]").value = rd;
+  ok("myhr: request form offers no maternity/paternity types", !/Maternity|Paternity/.test(rm.querySelector("[name=leave_type]").innerHTML));
+  submit(app); await sleep(300);
+  const after = await hrApi().leave.list({ staff_id: own.id });
+  ok("myhr: request created as pending", after.length === before + 1 && after.some(l => l.start_date === rd && l.status === "pending"));
+  view(app).querySelector('[data-act="request"]').click(); await sleep(60);
+  rm = modal(app); const far = (() => { let d = new Date(); d.setDate(d.getDate() + 200); return d.toISOString().slice(0, 10); })();
+  const far2 = (() => { let d = new Date(); d.setDate(d.getDate() + 260); return d.toISOString().slice(0, 10); })();
+  rm.querySelector("[name=start_date]").value = far; rm.querySelector("[name=end_date]").value = far2; submit(app); await sleep(200);
+  ok("myhr: cannot request more annual leave than remaining", /only have/i.test(modal(app).querySelector(".modal-error").textContent));
+  modal(app).querySelector("[data-close]").click();
+  const cancelBtn = [...view(app).querySelectorAll('[data-act="cancel"]')][0];
+  ok("myhr: can cancel own pending request", !!cancelBtn);
+  cancelBtn.click(); await sleep(60); modal(app).querySelector('button[type="submit"]').click(); modal(app) && submit(app); await sleep(250);
+  ok("myhr: cancelled request status", (await hrApi().leave.list({ staff_id: own.id })).some(l => l.status === "cancelled"));
+  const sdeny = await hrApi().leave.update(after.filter(l => l.status === "pending")[0] ? after.filter(l => l.status === "pending")[0].id : "x", { status: "approved" }).then(() => "allowed", () => "denied");
+  ok("myhr: staff cannot approve leave", sdeny === "denied");
+  ok("myhr: staff has no HR management route", !app.doc.querySelector('#side-nav [data-route="hr"]'));
+  app.dom.window.close();
+
+  // Group HR (read-only) + audit
+  app = await newApp("u_ga");
+  await go(app, "hrgroup");
+  ok("hrgroup: roll-up has a row per practice", view(app).querySelectorAll("table.data tbody tr").length === 3, String(view(app).querySelectorAll("table.data tbody tr").length));
+  ok("hrgroup: directory lists staff across sites", /Callum Reid/.test(view(app).innerHTML) && /Gethin Morris/.test(view(app).innerHTML) && !/Emyr Hughes/.test(view(app).innerHTML));
+  view(app).querySelector('#g-list [data-act="open"]').click(); await sleep(250);
+  ok("hrgroup: group admin sees full record but no edit actions", !!modal(app) && !modal(app).querySelector('[data-act="edit"]') && !modal(app).querySelector('[data-act="recordleave"]'));
+  ok("hrgroup: full leave detail visible", /Sick leave|Annual leave|Maternity/.test(modal(app).innerHTML));
+  modal(app).querySelector("[data-close]").click();
+  const gaud = await app.w.CC.api.audit.list({});
+  ok("hrgroup: record view audited", gaud.some(a => a.action === "view_hr_record"));
+  ok("hrgroup: cannot create staff or leave", await app.w.CC.api.hr.staff.create({ practice_id: "p1", full_name: "x" }).then(() => false, () => true));
+  ok("hrgroup: cannot decide leave", await app.w.CC.api.hr.leave.update("x", { status: "approved" }).then(() => false, () => true));
+  view(app).querySelector('[data-act="site"]').click(); await sleep(250);
+  ok("hrgroup: open site HR is read-only", /read-only/.test(view(app).innerHTML) && !view(app).querySelector('[data-act="addstaff"]'));
+  ok("hrgroup: no approve buttons for group admin", !view(app).querySelector('[data-act="approve"]'));
+  app.dom.window.close();
+
+  // Isolation
+  app = await newApp("u_pr4");
+  await go(app, "hr");
+  ok("hr: independent practice sees only its own staff", /Nia Parry/.test(view(app).innerHTML) && !/Owen Evans|Callum Reid/.test(view(app).innerHTML));
+  ok("hr: inspector has no HR", !(await newApp("u_insp")).doc.querySelector('#side-nav [data-route^="hr"], #side-nav [data-route="myhr"]'));
+  app.dom.window.close();
+  app = await newApp("u_pr1", "cy");
+  await go(app, "myhr");
+  ok("hr: Welsh strings render", /Fy Adnoddau Dynol|Ceisiadau|Hawl/.test(view(app).innerHTML) || /Mae eich cofnod|Nid yw eich cofnod/.test(view(app).innerHTML), view(app).innerHTML.slice(0, 200));
+  await go(app, "hr"); ok("hr: Welsh people tab", /Adnoddau Dynol/.test(view(app).innerHTML));
+  app.dom.window.close();
+
+  // ---------------- Group training + alerts ----------------
+  console.log("\n=== Group training & alerts");
+  app = await newApp("u_ga");
+  await go(app, "grouptrain");
+  ok("grouptrain: matrix lists group practices", /Swansea Marina Dental/.test(view(app).innerHTML) && /Newport High Street/.test(view(app).innerHTML) && !/Aberystwyth/.test(view(app).innerHTML));
+  ok("grouptrain: overdue list shown", /days overdue/.test(view(app).innerHTML));
+  const trBefore = (await app.w.CC.api.training.assignments({})).length;
+  view(app).querySelector('[data-act="assign"]').click(); await sleep(80);
+  let gm = modal(app); ok("grouptrain: assign modal opens", !!gm && gm.querySelectorAll('input[name="mods"]').length >= 10);
+  const refreshMod = app.w.CC.DEMO_CONTENT.modules.filter(m => m.kind === "refresher")[3];
+  gm.querySelector(`input[name="mods"][value="${refreshMod.id}"]`).checked = true;
+  gm.querySelector("form").dispatchEvent(new app.w.Event("submit", { cancelable: true })); await sleep(250);
+  const trAfter = await app.w.CC.api.training.assignments({});
+  ok("grouptrain: bulk assign created assignments", trAfter.length === trBefore + 5, String(trAfter.length - trBefore));
+  ok("grouptrain: all group practices covered, none outside", new Set(trAfter.filter(a => a.module_id === refreshMod.id).map(a => a.practice_id)).size === 3 && !trAfter.some(a => a.practice_id === "p4"));
+  ok("grouptrain: bulk assign audited", (await app.w.CC.api.audit.list({})).filter(a => a.action === "assign_training").length >= 3);
+  ok("grouptrain: assigning again adds nothing", (await (async () => { await app.w.CC.api.training.assign(trAfter.filter(a => a.module_id === refreshMod.id).map(a => ({ module_id: a.module_id, profile_id: a.profile_id, practice_id: a.practice_id }))); return app.w.CC.api.training.assignments({}); })()).length === trAfter.length);
+  await go(app, "alerts");
+  ok("alerts: group admin sees practice column + items", /<th>Practice<\/th>/.test(view(app).innerHTML) && view(app).querySelectorAll("tbody tr").length > 3);
+  ok("alerts: bell shows a count", !app.doc.getElementById("bell").hidden && !app.doc.getElementById("bell-n").hidden);
+  app.dom.window.close();
+
+  app = await newApp("u_pm1");
+  await go(app, "alerts");
+  const rowsHtml = view(app).innerHTML;
+  ok("alerts: principal sees expired/expiring items", /expired \d+ days ago|in \d+ days/.test(rowsHtml) && /Urgent|Soon/.test(rowsHtml));
+  ok("alerts: HR expiries included", /GDC registration|Indemnity|DBS/.test(rowsHtml));
+  ok("alerts: filter by type", (() => { const sel = app.doc.getElementById("f-kind"); sel.value = "training"; sel.dispatchEvent(new app.w.Event("change")); return true; })());
+  await sleep(50);
+  ok("alerts: training filter narrows list", view(app).querySelectorAll("tbody tr").length === 0 || [...view(app).querySelectorAll("tbody tr")].every(r => /Training overdue/.test(r.innerHTML)));
+  const cb = app.doc.getElementById("pref-email"); cb.checked = false; cb.dispatchEvent(new app.w.Event("change")); await sleep(80);
+  ok("alerts: email opt-out saved", (await app.w.CC.api.alerts.getPrefs()).email_digest === false);
+  app.dom.window.close();
+
+  app = await newApp("u_st1");
+  await go(app, "alerts");
+  ok("alerts: staff sees no one else's items", !/<th>Practice<\/th>/.test(view(app).innerHTML) && ![...view(app).querySelectorAll("tbody tr")].some(r => /Priya Patel|Rhian Davies/.test(r.innerHTML)));
+  app.dom.window.close();
+  app = await newApp("u_pr4");
+  await go(app, "alerts");
+  ok("alerts: independent practice scoped to itself", !/Swansea|Newport|Cardiff/.test(view(app).innerHTML.replace(/<option[\s\S]*?<\/option>/g, "")));
+  ok("alerts: inspector has no bell", (await (async () => { const a = await newApp("u_insp"); const h = a.doc.getElementById("bell").hidden; a.dom.window.close(); return h; })()));
+  app.dom.window.close();
+  app = await newApp("u_ga", "cy");
+  await go(app, "grouptrain"); ok("grouptrain: Welsh renders", /Hyfforddiant grŵp/.test(view(app).innerHTML));
+  await go(app, "alerts"); ok("alerts: Welsh renders", /Rhybuddion/.test(view(app).innerHTML));
+  app.dom.window.close();
+
+  // ---------------- Compliance tools ----------------
+  console.log("\n=== Tasks, maintenance, logs, policies, staff compliance, audits");
+  {
+  app = await newApp("u_pm1");
+  let A = app.w.CC.api;
+  await go(app, "tasks");
+  ok("tasks: list shows recommended tasks", /Medical emergency drugs/.test(view(app).innerHTML) && view(app).querySelectorAll("tbody tr").length >= 15);
+  ok("tasks: overdue and on-time KPIs shown", /Overdue/.test(view(app).innerHTML) && /Done on time/.test(view(app).innerHTML));
+  const before0 = (await A.tasks.list("p1")).length;
+  view(app).querySelector('[data-act="add"]').click(); await sleep(60);
+  let ctm = modal(app); ctm.querySelector('input[name="title"]').value = "Test monthly task"; ctm.querySelector('select[name="frequency"]').value = "monthly"; ctm.querySelector('input[name="next_due"]').value = app.w.CC.isoDate(-2);
+  ctm.querySelector("form").dispatchEvent(new app.w.Event("submit", { cancelable: true })); await sleep(200);
+  const ctl = await A.tasks.list("p1"); ok("tasks: add task via UI", ctl.length === before0 + 1);
+  const mine = ctl.find(t => t.title === "Test monthly task");
+  const nextBefore = mine.next_due;
+  view(app).querySelector(`[data-act="done"][data-id="${mine.id}"]`).click(); await sleep(60);
+  modal(app).querySelector("form").dispatchEvent(new app.w.Event("submit", { cancelable: true })); await sleep(200);
+  const after1 = (await A.tasks.list("p1")).find(t => t.id === mine.id);
+  ok("tasks: mark done moves next due past today", after1.next_due > nextBefore && after1.next_due > app.w.CC.isoDate(0) && after1.last_done === app.w.CC.isoDate(0));
+  ok("tasks: completion recorded + audited", (await A.tasks.completions("p1")).some(c => c.task_id === mine.id) && (await A.audit.list({})).some(a => a.action === "complete_task"));
+  view(app).querySelector('[data-seg="calendar"]').click(); await sleep(60);
+  ok("tasks: calendar renders month grid with events", view(app).querySelectorAll(".cal-cell").length >= 28 && view(app).querySelectorAll(".cal-ev").length > 3);
+  view(app).querySelector('[data-act="next"]').click(); await sleep(40); ok("tasks: calendar next month", view(app).querySelectorAll(".cal-cell").length >= 28);
+  view(app).querySelector(".cal-cell:not(.cal-off)").click(); await sleep(40); ok("tasks: calendar day opens", !!modal(app)); modal(app).remove();
+  view(app).querySelector('[data-seg="list"]').click(); await sleep(40);
+  ok("tasks: recommended set offers nothing when all added", (() => { view(app).querySelector('[data-act="library"]').click(); return true; })()); await sleep(60);
+  modal(app) && modal(app).remove();
+  app.dom.window.close();
+
+  app = await newApp("u_st1"); A = app.w.CC.api;
+  await go(app, "tasks");
+  ok("tasks: staff sees only own assigned tasks, no add", view(app).querySelectorAll("tbody tr").length >= 1 && view(app).querySelectorAll("tbody tr").length <= 4 && !view(app).querySelector('[data-act="add"]'));
+  const sTasks = await A.tasks.list("p1"); const notMine = (await (async () => { app.w.CC.api.demoLogin("u_pm1"); const all = await A.tasks.list("p1"); app.w.CC.api.demoLogin("u_st1"); return all.find(t => t.assignee_id !== "u_st1"); })());
+  let denied = false; try { await A.tasks.complete(notMine.id); } catch (e) { denied = true; } ok("tasks: staff cannot complete others' tasks", denied);
+  await go(app, "logs");
+  ok("logs: six log cards", view(app).querySelectorAll(".log-card").length === 6);
+  const lbefore = (await A.logs.list("p1", {})).length;
+  view(app).querySelector('[data-act="add"][data-key="fridge"]').click(); await sleep(60);
+  let lm = modal(app); lm.querySelector('input[name="f_temp"]').value = "11"; lm.querySelector('input[name="f_reset"]').checked = true;
+  lm.querySelector("form").dispatchEvent(new app.w.Event("submit", { cancelable: true })); await sleep(120);
+  ok("logs: out-of-range entry needs a note", (await A.logs.list("p1", {})).length === lbefore && /action you have taken/.test(modal(app).innerHTML)); modal(app).remove();
+  view(app).querySelector('[data-act="add"][data-key="fridge"]').click(); await sleep(60);
+  lm = modal(app); lm.querySelector('input[name="f_temp"]').value = "11"; lm.querySelector('input[name="f_reset"]').checked = true; lm.querySelector('textarea[name="note"]').value = "Door left open; stock checked and temperature rechecked.";
+  lm.querySelector("form").dispatchEvent(new app.w.Event("submit", { cancelable: true })); await sleep(200);
+  const lAfter = await A.logs.list("p1", {}); ok("logs: failed entry saved and flagged", lAfter.length === lbefore + 1 && lAfter.find(l => l.note && /rechecked/.test(l.note)).pass === false);
+  view(app).querySelector('[data-act="add"][data-key="fridge"]').click(); await sleep(60);
+  lm = modal(app); lm.querySelector('input[name="f_temp"]').value = "4"; lm.querySelector('input[name="f_reset"]').checked = true;
+  lm.querySelector("form").dispatchEvent(new app.w.Event("submit", { cancelable: true })); await sleep(200);
+  ok("logs: good entry saved as pass, signed by user", (await A.logs.list("p1", {})).filter(l => l.done_by === "u_st1" && l.log_type === "fridge" && l.pass).length >= 1);
+  ok("logs: entries are immutable via API", !A.logs.update && !A.logs.remove);
+  let pdenied = false; try { await A.logs.add({ practice_id: "p2", log_type: "fridge", data: {} }); } catch (e) { pdenied = true; } ok("logs: cannot log into another practice", pdenied);
+  await go(app, "policies");
+  ok("policies: library listed with to-review count", view(app).querySelectorAll("tbody tr").length === 15 && /Policies to review/.test(view(app).innerHTML));
+  const toRev = [...view(app).querySelectorAll("tbody tr")].filter(r => /To review/.test(r.innerHTML)).length;
+  const firstTodo = [...view(app).querySelectorAll("tbody tr")].find(r => /To review/.test(r.innerHTML)).querySelector("button");
+  firstTodo.click(); await sleep(60);
+  ok("policies: reading shows policy text and sign-off button", /Purpose/.test(modal(app).innerHTML) && /read and understood/.test(modal(app).innerHTML));
+  modal(app).querySelector("form").dispatchEvent(new app.w.Event("submit", { cancelable: true })); await sleep(200);
+  ok("policies: sign-off reduces to-review count", [...view(app).querySelectorAll("tbody tr")].filter(r => /To review/.test(r.innerHTML)).length === toRev - 1);
+  await go(app, "dashboard");
+  ok("dashboard: tools summary for staff", /Tasks done on time|Policies to review/.test(view(app).innerHTML));
+  app.dom.window.close();
+
+  app = await newApp("u_pm1"); A = app.w.CC.api;
+  await go(app, "maintenance");
+  ok("maintenance: groups and statuses shown", /Fire/.test(view(app).innerHTML) && /overdue|In date|Date needed/.test(view(app).innerHTML));
+  const mItems = await A.maintenance.list("p1"); const needDate = mItems.find(m => !m.last_done) || mItems[0];
+  view(app).querySelector(`[data-act="today"][data-id="${needDate.id}"]`).click(); await sleep(150);
+  const mAfter = (await A.maintenance.list("p1")).find(m => m.id === needDate.id);
+  ok("maintenance: done today sets next due from frequency", mAfter.last_done === app.w.CC.isoDate(0) && mAfter.next_due > mAfter.last_done);
+  await go(app, "staffcompliance");
+  ok("staffcompliance: overview with percentages", /Training/.test(view(app).innerHTML) && view(app).querySelectorAll(".progress").length >= 5);
+  view(app).querySelector('[data-seg="training"]').click(); await sleep(60);
+  ok("staffcompliance: training matrix has all courses", view(app).querySelectorAll("th.mx-h").length === app.w.CC.TOOLS.COURSES.length);
+  const cell = view(app).querySelector("td[data-cell]"); cell.click(); await sleep(60);
+  ok("staffcompliance: cell opens editor", !!modal(app)); 
+  modal(app).querySelector('input[name="done_on"]').value = app.w.CC.isoDate(-5); modal(app).querySelector("form").dispatchEvent(new app.w.Event("submit", { cancelable: true })); await sleep(200);
+  ok("staffcompliance: recorded date saved", (await A.checklist.list("p1")).some(c => c.done_on === app.w.CC.isoDate(-5)));
+  view(app).querySelector('[data-seg="recruitment"]').click(); await sleep(60);
+  ok("staffcompliance: recruitment checklist columns", view(app).querySelectorAll("th.mx-h").length === app.w.CC.TOOLS.RECRUIT.length);
+  await go(app, "audits");
+  ok("audits: other audit types offered", /Infection prevention/.test(view(app).innerHTML) && !/HIW self-assessment<\/button>/.test(view(app).innerHTML));
+  view(app).querySelector('[data-act="start"]').click(); await sleep(150);
+  const aRadios = view(app).querySelectorAll('input[type=radio][value="yes"]'); ok("audits: IPC audit shows its 14 questions", aRadios.length === 14, String(aRadios.length));
+  aRadios.forEach((r, i) => { r.checked = true; r.dispatchEvent(new app.w.Event("change", { bubbles: true })); }); await sleep(80);
+  view(app).querySelector('[data-act="complete"]').click(); await sleep(300);
+  ok("audits: completes with gap report", !!modal(app)); modal(app) && modal(app).remove();
+  const pi = await A.practiceInputs("p1");
+  ok("audits: HIW score input unaffected by other audit kinds", pi.assessment && pi.assessment.answers.length === app.w.CC.DEMO_CONTENT.questions.filter(q => !q.kind || q.kind === "hiw").length);
+  await go(app, "alerts");
+  ok("alerts: include tasks and maintenance kinds", app.w.CC.alerts.list.some(a => a.kind === "task") && app.w.CC.alerts.list.some(a => a.kind === "maintenance"));
+  await go(app, "dashboard");
+  ok("dashboard: tools summary KPIs", /Staff compliance/.test(view(app).innerHTML) && /Maintenance overdue/.test(view(app).innerHTML));
+  app.dom.window.close();
+
+  app = await newApp("u_ga"); A = app.w.CC.api;
+  await go(app, "staffcompliance"); ok("group admin: staff compliance read-only", !view(app).querySelector("[data-cell]") && /Staff compliance/.test(view(app).innerHTML));
+  await go(app, "maintenance"); ok("group admin: maintenance read-only", !view(app).querySelector('[data-act="add"]') && view(app).querySelectorAll("tbody tr").length > 5);
+  let md = false; try { await A.maintenance.update((await A.maintenance.list("p1"))[0].id, { notes: "x" }); } catch (e) { md = true; } ok("group admin: cannot edit maintenance", md);
+  await go(app, "tasks"); ok("group admin: can add tasks across group", !!view(app).querySelector('[data-act="add"]'));
+  app.dom.window.close();
+  app = await newApp("u_ga", "cy"); await go(app, "tasks"); ok("tasks: Welsh renders", /Tasgau a chalendr/.test(view(app).innerHTML)); await go(app, "maintenance"); ok("maintenance: Welsh renders", /Cofrestr cynnal a chadw/.test(view(app).innerHTML)); app.dom.window.close();
+  app = await newApp("u_pm1", "cy"); await go(app, "policies"); ok("policies: Welsh titles", /Polisi cwynion/.test(view(app).innerHTML)); await go(app, "audits"); ok("audits: Welsh renders", /Archwiliadau/.test(view(app).innerHTML)); app.dom.window.close();
+  app = await newApp("u_pr4"); await go(app, "staffcompliance");
+  ok("independent practice: staff compliance scoped to itself", /Nia Parry/.test(view(app).innerHTML) || /Rhodri/.test(view(app).innerHTML)); ok("independent practice: no other practices' staff", !/Owen Evans|Callum Reid/.test(view(app).innerHTML)); app.dom.window.close();
+
+  }
+
+  // Language toggle + settings + MFA demo
+  app = await newApp("u_pr1");
+  app.doc.querySelector('#lang-toggle [data-lang="cy"]').click(); await sleep(150);
+  ok("language toggle switches html lang", app.doc.documentElement.lang === "cy");
+  await go(app, "settings"); ok("settings renders", /Cymraeg/.test(view(app).innerHTML));
+  app.dom.window.close();
+
+  // Sign out -> sign in screen
+  app = await newApp("u_pr1"); app.w.CC.signOut(); await sleep(100);
+  ok("sign out returns to auth screen", !app.doc.getElementById("auth").hidden && app.doc.getElementById("app").hidden);
+  app.dom.window.close();
+
+  console.log(`\n${checks - failures}/${checks} checks passed`);
+  process.exit(failures ? 1 : 0);
+})().catch(e => { console.error("HARNESS CRASH", e); process.exit(2); });

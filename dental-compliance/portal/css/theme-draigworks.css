@@ -1,0 +1,170 @@
+/* Draigworks theme for the portal (portal/draigworks.html).
+   Tokens taken from draigworks.uk: near-black surfaces, red/coral gradient accent,
+   Space Grotesk headings + DM Sans body, pill buttons, big radii. 6-digit hex in :root (charts read them). */
+:root {
+  --bg: #090c11; --panel: #10151d; --card: #111720; --card-hi: #151c27; --line: #222a36;
+  --text: #f5f7fa; --soft: #b4bdca; --muted: #9aa6b5;
+  --red: #ff4658; --red-hover: #ff5f6e; --coral: #ff8c70; --amber-g: #ffbf88; --on-red: #0a0d12;
+  --grad: linear-gradient(135deg, #ff5668, #ff8c70 60%, #ffbf88);
+
+  --navy-900: #f5f7fa; --navy-800: #e8edf4; --navy-700: #b4bdca;
+  --blue-600: #ff4658; --blue-500: #ff5f6e; --sky-400: #ff8c70; --sky-300: #ffbf88; --sky-100: #2a1a20;
+  --white: #10151d; --ink: #f5f7fa;
+  --slate-50: #0d1117; --slate-100: #151c27; --slate-200: #222a36; --slate-400: #8a96a5; --slate-600: #9aa6b5; --slate-800: #e8edf4;
+  --status-green: #83e0b1; --status-green-bg: rgba(88,210,150,.14);
+  --status-amber: #ffbf88; --status-amber-bg: rgba(255,178,100,.15);
+  --status-red: #ff6976; --status-red-bg: rgba(255,70,88,.16);
+  --shadow-sm: 0 1px 0 rgba(255,255,255,.03) inset, 0 8px 24px rgba(0,0,0,.35);
+  --shadow-md: 0 16px 40px rgba(0,0,0,.5); --shadow-lg: 0 24px 60px rgba(0,0,0,.55);
+  --font-base: "DM Sans", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-display: "Space Grotesk", ui-sans-serif, system-ui, sans-serif;
+  --chart-text: #9aa6b5; --chart-grid: rgba(255,255,255,.07); --chart-arc: #10151d;
+}
+html { color-scheme: dark; }
+body.portal { background: radial-gradient(900px 480px at 85% -120px, rgba(255,70,88,.14), transparent 65%), var(--bg); background-attachment: fixed; color: var(--text); font-family: var(--font-base); }
+h1, h2, h3, h4, .page-head h1, .kpi .value, .cat-card .score { font-family: var(--font-display); letter-spacing: -0.02em; color: var(--text); }
+.page-head h1 { font-weight: 600; font-size: 1.9rem; letter-spacing: -0.03em; }
+.greet { color: var(--coral); }
+a { color: var(--coral); }
+#boot { color: var(--muted); }
+
+/* ---- buttons ---- */
+.btn { border-radius: 999px; font-weight: 600; }
+.btn-primary { background: var(--red); color: var(--on-red); box-shadow: 0 10px 30px rgba(255,70,88,.22); border-color: transparent; }
+.btn-primary:hover { background: var(--red-hover); transform: translateY(-1px); box-shadow: 0 14px 34px rgba(255,70,88,.32); }
+.btn-secondary { background: transparent; color: var(--text); border: 1px solid #3a4350; }
+.btn-secondary:hover { border-color: #566173; color: var(--text); background: rgba(255,255,255,.04); }
+.btn-danger { background: transparent; color: var(--status-red); border-color: rgba(255,70,88,.4); }
+.btn-danger:hover { background: var(--status-red-bg); }
+.link-btn { color: var(--coral); }
+
+/* ---- sidebar ---- */
+#app { grid-template-columns: 272px 1fr; }
+.sidebar { background: #0c1016; border-right: 1px solid var(--line); color: var(--text); }
+.sidebar .brand-row { color: var(--text); font-family: var(--font-display); font-weight: 600; border-bottom: 1px solid var(--line); margin-bottom: 12px; }
+.sidebar .brand-row img { background: #fff; border-radius: 10px; }
+.sidebar nav a { color: var(--muted); border-radius: 12px; }
+.sidebar nav a:hover { background: rgba(255,255,255,.05); color: var(--text); }
+.sidebar nav a.active { background: rgba(255,70,88,.14); color: var(--text); box-shadow: inset 3px 0 0 var(--red); }
+.sidebar nav a.active .ico { color: var(--red); }
+.sidebar .side-foot { color: var(--muted); border-top-color: var(--line); }
+.sidebar .side-foot a { color: var(--muted); }
+.sidebar-scrim { background: rgba(0,0,0,.6); }
+body.nav-open .sidebar-scrim { background: rgba(0,0,0,.6); }
+
+/* ---- top bar ---- */
+.topbar { background: rgba(9,12,17,.82); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); border-bottom: 1px solid var(--line); }
+.topbar h2 { color: var(--text); font-family: var(--font-display); font-weight: 600; }
+.topbar select, .filters select, .filters input, .field input, .field select, .field textarea, .q-card textarea, input, select, textarea { background: #0b1016; color: var(--text); border: 1px solid #4a5565; border-radius: 12px; }
+input::placeholder, textarea::placeholder { color: #7d8a9b; }
+input:focus, select:focus, textarea:focus { outline: 0; border-color: #ff6473; box-shadow: 0 0 0 3px rgba(255,70,88,.2); }
+.menu-btn { color: var(--text); }
+.avatar { background: var(--grad); color: var(--on-red); box-shadow: none; }
+.user-pill .who small { color: var(--muted); }
+a.user-pill:hover, .bell:hover { background: rgba(255,255,255,.06); }
+.bell { color: var(--soft); }
+.lang-toggle { background: var(--panel); border: 1px solid var(--line); }
+.lang-toggle button { color: var(--muted); }
+.lang-toggle button.active { background: var(--text); color: var(--on-red); }
+
+/* ---- cards ---- */
+.panel, .kpi, .cat-card, .table-wrap, .log-card, .hr-card, .modal, .qr, .cal-cell, .banner { background: var(--card); border: 1px solid var(--line); color: var(--text); box-shadow: none; }
+.panel, .kpi, .cat-card, .table-wrap, .hr-card, .log-card { border-radius: 20px; }
+.kpi { position: relative; overflow: hidden; }
+.kpi::before { display: none; }
+.kpi::after { content: ""; position: absolute; left: 18px; top: 0; width: 38px; height: 3px; border-radius: 0 0 3px 3px; background: var(--grad); }
+.kpi.green::after { background: #83e0b1; } .kpi.amber::after { background: #ffbf88; } .kpi.red::after { background: #ff4658; }
+.kpi .label { color: var(--muted); letter-spacing: .08em; }
+.kpi .value { color: var(--text); }
+.kpi.green .value { color: var(--status-green); } .kpi.amber .value { color: var(--status-amber); } .kpi.red .value { color: var(--status-red); }
+.kpi .sub, .muted, .list .sub, .cat-card .meta, .empty { color: var(--muted); }
+.kpi:hover, .cat-card:hover, .hr-card:hover { border-color: #3a4350; background: var(--card-hi); transform: translateY(-2px); box-shadow: var(--shadow-md); }
+.cat-card { border-left-width: 1px; }
+.cat-card strong, .cat-card .score { color: var(--text); }
+.cat-card.green { border-left-color: var(--status-green); } .cat-card.amber { border-left-color: #ffbf88; } .cat-card.red { border-left-color: var(--red); }
+.banner.info { background: rgba(255,70,88,.08); border-color: rgba(255,70,88,.3); color: var(--soft); }
+.banner.warn { background: var(--status-amber-bg); border-color: rgba(255,178,100,.35); color: var(--amber-g); }
+.form-error, .modal-error { background: var(--status-red-bg); color: #ff9aa4; border-color: rgba(255,70,88,.35); }
+.form-info { background: rgba(255,70,88,.08); color: var(--soft); border-color: rgba(255,70,88,.3); }
+
+/* ---- chips, progress ---- */
+.chip-green { background: rgba(88,210,150,.14); color: #83e0b1; }
+.chip-amber { background: rgba(255,178,100,.15); color: #ffbf88; }
+.chip-red { background: rgba(255,70,88,.16); color: #ff8a96; }
+.chip-blue { background: rgba(121,191,255,.14); color: #79bfff; }
+.chip-none, .chip-grey { background: rgba(255,255,255,.07); color: var(--muted); }
+.progress { background: rgba(255,255,255,.08); }
+.progress > span { background: var(--grad); }
+
+/* ---- tables ---- */
+.table-wrap { background: var(--card); }
+table.data th { background: transparent; color: var(--muted); border-bottom: 1px solid var(--line); }
+table.data td { border-bottom: 1px solid rgba(255,255,255,.06); color: var(--text); }
+table.data tr:hover td { background: rgba(255,255,255,.03); }
+table.mx-wide .sticky { background: var(--card); box-shadow: 1px 0 0 var(--line); }
+.mx-green { background: rgba(88,210,150,.16); color: #83e0b1; } .mx-amber { background: rgba(255,178,100,.16); color: #ffbf88; } .mx-red { background: rgba(255,70,88,.18); color: #ff8a96; }
+
+/* ---- lists, assessments, tabs ---- */
+.list li, .q-card, .hr-card-foot, .hr-h, .modal-head { border-color: rgba(255,255,255,.07); }
+.q-card .q-text { color: var(--text); } .q-card .q-ref { color: var(--coral); }
+.answers span { background: transparent; border-color: #3a4350; color: var(--soft); }
+.answers label:hover span { border-color: #566173; }
+.answers input:checked + span.a-yes { background: rgba(88,210,150,.16); border-color: #83e0b1; color: #83e0b1; }
+.answers input:checked + span.a-partial { background: rgba(255,178,100,.16); border-color: #ffbf88; color: #ffbf88; }
+.answers input:checked + span.a-no { background: rgba(255,70,88,.18); border-color: #ff6976; color: #ff8a96; }
+.answers input:checked + span.a-na { background: rgba(255,255,255,.08); border-color: #8a96a5; color: var(--text); }
+.tabs, .seg { background: var(--panel); border: 1px solid var(--line); border-radius: 999px; }
+.tabs button, .seg button { color: var(--muted); border-radius: 999px; }
+.tabs button.active, .seg button.active { background: var(--text); color: var(--on-red); box-shadow: none; }
+
+/* ---- modal / toast ---- */
+.modal-overlay { background: rgba(0,0,0,.7); backdrop-filter: blur(4px); }
+.modal { border-radius: 24px; box-shadow: var(--shadow-lg); }
+.icon-btn { color: var(--muted); }
+.checks { border-color: var(--line); }
+.toast { background: #151c27; border: 1px solid var(--line); color: var(--text); border-radius: 14px; }
+.toast-err { background: #3a1219; }
+code.secret { background: rgba(255,255,255,.08); color: var(--text); }
+
+/* ---- calendar / HR ---- */
+.cal-cell, .cal-cell:not(.cal-off) { background: var(--card); border-color: var(--line); }
+.cal-cell.cal-off, .cal-empty { background: transparent; border-color: transparent; }
+.cal-cell.cal-today { border-color: var(--red); box-shadow: inset 0 0 0 1px var(--red); }
+.cal-we { background: rgba(255,255,255,.02); } .cal-bh { background: rgba(255,70,88,.08); }
+.cal-ev.cal-blue, .cal-key.cal-blue { background: rgba(121,191,255,.16); color: #79bfff; }
+.cal-ev.cal-red, .cal-key.cal-red { background: rgba(255,70,88,.18); color: #ff8a96; }
+.cal-ev.cal-green, .cal-key.cal-green { background: rgba(88,210,150,.16); color: #83e0b1; }
+.cal-ev.cal-grey, .cal-key.cal-grey { background: rgba(255,255,255,.08); color: var(--soft); }
+.hr-avatar { background: var(--card-hi); color: var(--text); box-shadow: 0 0 0 2px var(--line); }
+.hr-avatar-init { background: var(--grad); color: var(--on-red); }
+.hr-card-name { color: var(--text); } .hr-card-sub { color: var(--muted); }
+.hr-name { color: var(--text); } .hr-dl dt { color: var(--muted); }
+.bell-n { background: var(--red); color: var(--on-red); }
+.policy-body { color: var(--soft); }
+
+/* ---- sign-in ---- */
+.auth-side { background: radial-gradient(700px 420px at 80% -10%, rgba(255,70,88,.28), transparent 60%), radial-gradient(600px 400px at 0% 110%, rgba(255,140,112,.14), transparent 60%), #090c11; align-items: center; text-align: center; border-right: 1px solid var(--line); }
+.auth-side::before, .auth-side::after { display: none; }
+.auth-side h1 { color: var(--text); font-family: var(--font-display); font-weight: 600; letter-spacing: -0.03em; font-size: 2.6rem; }
+.auth-side p { color: var(--soft); }
+.auth-logo { width: 130px; height: 130px; border-radius: 32px; background: #fff; padding: 12px; margin: 0 auto 30px; box-shadow: 0 20px 60px rgba(255,70,88,.25); display: block; }
+.auth-main { background: var(--bg); }
+.auth-card { background: transparent; }
+.auth-card .brand-row { color: var(--text); font-family: var(--font-display); }
+.demo-box { background: var(--card); border: 1px dashed #3a4350; border-radius: 20px; }
+.demo-roles button { background: transparent; border-color: var(--line); color: var(--text); border-radius: 14px; }
+.demo-roles button small { color: var(--muted); }
+.demo-roles button:hover { border-color: var(--red); background: rgba(255,70,88,.06); }
+@media (max-width: 900px) { .auth-side h1 { font-size: 1.6rem; } .auth-logo { width: 84px; height: 84px; border-radius: 22px; padding: 6px; } }
+
+/* powered-by badge */
+.dw-badge { color: var(--muted); }
+.auth-card .brand-row img, .auth-card .brand-row img[src] { background: #fff; border-radius: 10px; padding: 2px; }
+
+/* Draig Dental Compliance branding: Draigworks wordmark instead of a square logo */
+.auth-logo { width: 220px; height: auto; background: none; border-radius: 0; padding: 0; box-shadow: none; margin: 0 auto 34px; }
+.sidebar .brand-row { flex-direction: column; align-items: flex-start; gap: 10px; padding: 6px 10px 18px; font-size: .95rem; }
+.sidebar .brand-row img, .auth-card .brand-row img { width: auto; height: 28px; background: none; border-radius: 0; padding: 0; }
+.auth-card .brand-row { gap: 14px; flex-wrap: wrap; }
+@media (max-width: 900px) { .auth-logo { width: 150px; height: auto; margin-bottom: 14px; } }
+.auth-card .brand-row img[src], .sidebar .brand-row img[src] { background: none; border-radius: 0; padding: 0; width: auto; height: 28px; }

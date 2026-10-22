@@ -39,7 +39,7 @@
         });
       },
       signUp: function (email, password, fullName) {
-        return sb.auth.signUp({ email: email, password: password, options: { data: { full_name: fullName } } }).then(function (r) {
+        return sb.auth.signUp({ email: email, password: password, options: { data: { full_name: fullName }, emailRedirectTo: location.href.split("#")[0] } }).then(function (r) {
           if (r.error) {
             if (/Database error|not been invited/i.test(r.error.message))
               throw new Error(CC.t("This email address has not been invited. Ask your Principal or Group Admin to invite you."));

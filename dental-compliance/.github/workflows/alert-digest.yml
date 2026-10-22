@@ -1,0 +1,24 @@
+name: Expiry reminder e-mails
+on:
+  schedule:
+    - cron: "30 7 * * 1-5"      # weekdays 07:30 UTC
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Dry run (do not send)"
+        default: "1"
+jobs:
+  send:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 20 }
+      - run: node scripts/send-alert-digests.mjs
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+          MAIL_FROM: ${{ secrets.MAIL_FROM }}
+          PORTAL_URL: ${{ secrets.PORTAL_URL }}
+          DRY_RUN: ${{ github.event_name == 'workflow_dispatch' && inputs.dry_run == '1' && '1' || '' }}

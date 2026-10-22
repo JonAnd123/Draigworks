@@ -1,0 +1,121 @@
+/* Draigworks theme for the marketing pages (served from /dw/). Loaded after style.css.
+   Tokens from draigworks.uk: #090c11 surfaces, red/coral gradient accent, Space Grotesk + DM Sans, pill buttons. */
+:root {
+  --bg: #090c11; --panel: #10151d; --card: #111720; --card-hi: #151c27; --line: #222a36;
+  --text: #f5f7fa; --soft: #b4bdca; --muted: #9aa6b5;
+  --red: #ff4658; --red-hover: #ff5f6e; --coral: #ff8c70; --on-red: #0a0d12;
+  --grad: linear-gradient(135deg, #ff5668, #ff8c70 60%, #ffbf88);
+  --navy-900: #f5f7fa; --navy-800: #e8edf4; --navy-700: #b4bdca;
+  --blue-600: #ff4658; --blue-500: #ff5f6e; --sky-400: #ff8c70; --sky-300: #ffbf88; --sky-100: #2a1a20;
+  --white: #10151d; --ink: #f5f7fa;
+  --slate-50: #0d1117; --slate-100: #151c27; --slate-200: #222a36; --slate-400: #8a96a5; --slate-600: #9aa6b5; --slate-800: #e8edf4;
+  --status-green: #83e0b1; --status-green-bg: rgba(88,210,150,.14);
+  --status-amber: #ffbf88; --status-amber-bg: rgba(255,178,100,.15);
+  --status-red: #ff6976; --status-red-bg: rgba(255,70,88,.16);
+  --shadow-sm: 0 8px 24px rgba(0,0,0,.35); --shadow-md: 0 16px 40px rgba(0,0,0,.5); --shadow-lg: 0 24px 60px rgba(0,0,0,.55);
+  --font-base: "DM Sans", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-display: "Space Grotesk", ui-sans-serif, system-ui, sans-serif;
+}
+html { color-scheme: dark; }
+body { background: var(--bg); color: var(--text); font-family: var(--font-base); }
+h1, h2, h3, h4 { font-family: var(--font-display); font-weight: 600; letter-spacing: -0.03em; color: var(--text); }
+h1 { letter-spacing: -0.04em; }
+p, .lede { color: var(--soft); }
+a { color: var(--coral); }
+.small { color: var(--muted); }
+
+/* header */
+.site-header { background: rgba(9,12,17,.82); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); border-bottom: 1px solid var(--line); }
+.brand { color: var(--text); font-family: var(--font-display); }
+.brand span { color: var(--text); }
+.brand img { background: #fff; border-radius: 8px; padding: 2px; }
+.nav-links a { color: #aab4c2; }
+.nav-links a:hover, .nav-links a.active { color: var(--text); }
+.nav-links a.active { box-shadow: inset 0 -2px 0 var(--red); }
+.nav-toggle span { background: var(--text); }
+.lang-toggle { background: var(--panel); border: 1px solid var(--line); }
+.lang-toggle button { color: var(--muted); }
+.lang-toggle button.active { background: var(--text); color: var(--on-red); }
+@media (max-width: 1140px) { .nav-links { background: var(--bg); } }
+
+/* buttons */
+.btn { border-radius: 999px; font-weight: 600; }
+.btn-primary { background: var(--red); color: var(--on-red); box-shadow: 0 10px 30px rgba(255,70,88,.22); }
+.btn-primary:hover { background: var(--red-hover); box-shadow: 0 14px 34px rgba(255,70,88,.32); }
+.btn-secondary { background: transparent; color: var(--text); border-color: #3a4350; }
+.btn-secondary:hover { border-color: #566173; color: var(--text); background: rgba(255,255,255,.04); }
+.btn-ghost { color: var(--text); border-color: #3a4350; }
+.btn-ghost:hover { background: rgba(255,255,255,.06); }
+
+/* hero */
+.hero { background: radial-gradient(1000px 520px at 85% -10%, rgba(255,70,88,.18), transparent 62%), radial-gradient(700px 400px at 0% 40%, rgba(255,140,112,.07), transparent 60%), var(--bg); }
+.hero h1 { font-weight: 600; }
+.eyebrow { background: rgba(255,70,88,.12); color: var(--coral); border: 1px solid rgba(255,70,88,.28); }
+.hero-stat strong { color: var(--text); font-family: var(--font-display); }
+.hero-stat span { color: var(--muted); }
+.hero-visual, .feature-visual { background: linear-gradient(160deg, #10151d, #151c27); border: 1px solid var(--line); box-shadow: var(--shadow-lg); color: var(--text); }
+.hero-visual .panel, .feature-visual .panel { background: rgba(255,255,255,.04); border-color: var(--line); }
+.feature-visual .bar > span { background: var(--grad); }
+.feature-visual .bar { background: rgba(255,255,255,.08); }
+
+/* sections / cards */
+.band { background: #0c1016; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+.band-navy { background: radial-gradient(800px 400px at 90% 0%, rgba(255,70,88,.2), transparent 60%), #0c1016; color: var(--text); border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+.band-navy h2, .band-navy h3, .band-navy .stat-strip strong { color: var(--text); }
+.band-navy p, .band-navy .stat-strip span { color: var(--soft); }
+.card, .price-card, .step, .portal-card, .path-option, .note-box, .form-card, .panel { background: var(--card); border: 1px solid var(--line); box-shadow: none; }
+.card, .price-card { border-radius: 20px; }
+.card:hover { border-color: #3a4350; background: var(--card-hi); box-shadow: var(--shadow-md); }
+.card .icon { background: rgba(255,70,88,.12); color: var(--red); }
+.card-link, .card-list li::before { color: var(--coral); }
+.card-list li { color: var(--soft); }
+.tag { background: rgba(255,70,88,.12); color: var(--coral); border: 1px solid rgba(255,70,88,.25); }
+.tag.amber { background: var(--status-amber-bg); color: var(--status-amber); border-color: rgba(255,178,100,.3); }
+.tag.navy { background: rgba(255,255,255,.08); color: var(--text); border-color: var(--line); }
+.step { border-left-color: var(--red); }
+.step .num { color: var(--coral); font-family: var(--font-display); }
+.price-card.featured { border-color: var(--red); background: linear-gradient(180deg, rgba(255,70,88,.08), var(--card)); box-shadow: 0 10px 40px rgba(255,70,88,.12); }
+.price-card .badge, .badge { background: var(--red); color: var(--on-red); }
+.price-amount { color: var(--text); font-family: var(--font-display); }
+table th { background: #0c1016; color: var(--muted); } table td { border-color: var(--line); color: var(--soft); }
+.service-nav a { border-color: #3a4350; color: var(--soft); }
+.service-nav a:hover { border-color: var(--red); color: var(--text); }
+.feature-row { border-bottom-color: var(--line); }
+.divider { background: var(--line); }
+.rag-row { color: var(--soft); }
+.stat-strip strong { color: var(--text); font-family: var(--font-display); }
+
+/* forms */
+input, select, textarea { background: #0b1016; color: var(--text); border: 1px solid #4a5565; border-radius: 12px; }
+input::placeholder, textarea::placeholder { color: #7d8a9b; }
+input:focus, select:focus, textarea:focus { outline: 0; border-color: #ff6473; box-shadow: 0 0 0 3px rgba(255,70,88,.2); }
+label { color: var(--text); }
+.path-option.selected { border-color: var(--red); background: rgba(255,70,88,.08); }
+.path-option strong { color: var(--text); }
+.form-sent, .form-success { background: var(--status-green-bg); color: var(--status-green); }
+
+/* portal page */
+.portal-side { background: radial-gradient(700px 420px at 80% -10%, rgba(255,70,88,.25), transparent 60%), #0c1016; border-right: 1px solid var(--line); }
+.portal-main { background: var(--bg); }
+.role-pill { background: rgba(255,255,255,.07); color: var(--text); border: 1px solid var(--line); }
+
+/* footer */
+.site-footer { background: #06080c; color: var(--muted); border-top: 1px solid var(--line); }
+.site-footer h4, .site-footer .brand { color: var(--text); }
+.site-footer a { color: var(--muted); } .site-footer a:hover { color: var(--text); }
+.footer-bottom { border-top-color: var(--line); color: var(--muted); }
+
+/* screenshots */
+.shot { background: #0b1016; border: 1px solid var(--line); box-shadow: 0 24px 60px rgba(0,0,0,.5); }
+.shot::before { background: radial-gradient(circle at 14px 11px, #ff5f57 4px, transparent 5px), radial-gradient(circle at 30px 11px, #febc2e 4px, transparent 5px), radial-gradient(circle at 46px 11px, #28c840 4px, transparent 5px), #151c27; border-bottom-color: var(--line); }
+.feature-visual.shot-visual, .hero-visual.shot-visual { background: radial-gradient(500px 300px at 80% 0%, rgba(255,70,88,.2), transparent 65%), #0c1016; }
+.feature-card:hover { border-color: var(--red); }
+.feature-card .card-link { color: var(--coral); }
+
+/* Draigworks wordmark as the site logo */
+.brand img.dw-logo { width: auto; height: 28px; background: none; border-radius: 0; padding: 0; }
+.site-footer .brand img.dw-logo { height: 24px; }
+.site-header .brand { gap: 12px; }
+.site-header .brand > span { font-size: 1rem; }
+.nav-links { gap: 20px; }
+@media (min-width: 1141px) { .nav-links a { font-size: .9rem; } }

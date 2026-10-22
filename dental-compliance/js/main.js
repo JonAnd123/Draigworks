@@ -129,12 +129,12 @@
     var c = window.CC_CONFIG;
     return fetch(c.SUPABASE_URL.replace(/\/$/, "") + "/rest/v1/enquiries", {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        apikey: c.SUPABASE_ANON_KEY,
-        Authorization: "Bearer " + c.SUPABASE_ANON_KEY,
-        Prefer: "return=minimal"
-      },
+      headers: (function () {
+        var h = { "Content-Type": "application/json", apikey: c.SUPABASE_ANON_KEY, Prefer: "return=minimal" };
+        // legacy anon keys are JWTs (eyJ...) and are also sent as a bearer token; new publishable keys (sb_publishable_...) must not be
+        if (/^eyJ/.test(c.SUPABASE_ANON_KEY)) h.Authorization = "Bearer " + c.SUPABASE_ANON_KEY;
+        return h;
+      })(),
       body: JSON.stringify(row)
     }).then(function (r) { if (!r.ok) throw new Error("HTTP " + r.status); });
   }

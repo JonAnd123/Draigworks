@@ -38,9 +38,9 @@ for p in PAGES:
     s = re.sub(r'<link rel="icon"[^>]*>', '<link rel="icon" href="img/draigworks-favicon.ico" sizes="any">', s)
     s = re.sub(r'<link rel="apple-touch-icon"[^>]*>', '<link rel="apple-touch-icon" href="img/draigworks-touch-icon.png">', s)
     s = s.replace("<html lang=\"en\">", '<html lang="en" data-brand="' + BRAND + '">', 1)
-    s = s.replace('src="js/translations.js"', 'src="translations.js"')
     s = re.sub(r'\b(href|src)=(["\'])([^"\']*)\2', fix, s)
     s = s.replace('<link rel="stylesheet" href="../css/style.css">', '<link rel="stylesheet" href="../css/style.css">\n' + FONTS, 1)
     s = s.replace("<title>", "<title>", 1)
+    s = s.replace('src="../js/translations.js"', 'src="translations.js"')   # Welsh strings with the Draig brand name
     (out / p).write_text(s, encoding="utf-8")
     print("wrote dw/" + p)

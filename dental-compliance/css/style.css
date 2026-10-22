@@ -148,8 +148,9 @@ section.tight { padding: 48px 0; }
 .site-header {
   position: sticky;
   top: 0;
-  z-index: 999;
-  background: rgba(255,255,255,0.97);
+  z-index: 100;
+  background: rgba(255,255,255,0.9);
+  backdrop-filter: saturate(180%) blur(10px);
   border-bottom: 1px solid var(--slate-200);
 }
 .nav {
@@ -157,7 +158,6 @@ section.tight { padding: 48px 0; }
   align-items: center;
   justify-content: space-between;
   padding: 14px 0;
-  flex-wrap: nowrap;
 }
 .brand {
   display: flex;
@@ -166,19 +166,15 @@ section.tight { padding: 48px 0; }
   font-weight: 800;
   color: var(--navy-900);
   font-size: 1.15rem;
-  flex-shrink: 0;
-  white-space: nowrap;
 }
-.brand img { width: 38px; height: 38px; flex-shrink: 0; }
+.brand img { width: 38px; height: 38px; }
 .brand .cy { color: var(--blue-600); }
 
 .nav-links {
   display: flex;
   align-items: center;
-  gap: 22px;
-  flex-wrap: nowrap;
+  gap: 30px;
 }
-.nav-links a { white-space: nowrap; }
 .nav-links a {
   color: var(--slate-800);
   font-weight: 600;
@@ -228,24 +224,22 @@ section.tight { padding: 48px 0; }
   border-radius: 2px;
 }
 
-@media (max-width: 1140px) {
+@media (max-width: 900px) {
   .nav-toggle { display: flex; }
   .nav-links {
     position: fixed;
-    top: 0;
+    top: 68px;
     left: 0;
     right: 0;
-    height: 100vh;
-    height: 100dvh;
+    bottom: 0;
     background: var(--white);
     flex-direction: column;
     align-items: flex-start;
     gap: 4px;
-    padding: 84px 24px 32px;
+    padding: 20px 24px 32px;
     transform: translateX(100%);
     transition: transform var(--transition);
     overflow-y: auto;
-    z-index: 998;
   }
   .nav-links.open { transform: translateX(0); }
   .nav-links a {
@@ -253,7 +247,7 @@ section.tight { padding: 48px 0; }
     padding: 14px 0;
     border-bottom: 1px solid var(--slate-100);
   }
-  .nav-actions { margin-left: auto; position: relative; z-index: 999; }
+  .nav-actions { margin-left: auto; }
   .nav-actions .btn-primary.desktop-only { display: none; }
 }
 
@@ -546,7 +540,7 @@ table.simple-table tr:last-child td { border-bottom: none; }
 .checkbox-field { display: flex; align-items: flex-start; gap: 10px; }
 .checkbox-field input { width: auto; margin-top: 4px; }
 
-.form-success, .form-sent {
+.form-success {
   display: none;
   background: var(--status-green-bg);
   border: 1px solid var(--status-green);
@@ -556,7 +550,7 @@ table.simple-table tr:last-child td { border-bottom: none; }
   font-size: 0.9rem;
   margin-top: 16px;
 }
-.form-success.show, .form-sent.show { display: block; }
+.form-success.show { display: block; }
 
 /* ---- Footer ---- */
 .site-footer {
@@ -703,6 +697,10 @@ table.simple-table tr:last-child td { border-bottom: none; }
 .mt-0 { margin-top: 0; }
 .small { font-size: 0.85rem; color: var(--slate-400); }
 
+/* form feedback used by the enquiry forms */
+.form-sent { display: none; background: var(--status-green-bg); border: 1px solid var(--status-green); color: #146c3a; border-radius: var(--radius-md); padding: 16px 18px; font-size: 0.9rem; margin-top: 16px; }
+.form-sent.show { display: block; }
+
 /* Draigworks "powered by" badge */
 .dw-badge { display: flex; align-items: center; justify-content: center; gap: 10px; width: fit-content; margin: 26px auto 0; padding: 4px 6px; background: none; color: rgba(255,255,255,.7); font-size: .7rem; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; text-decoration: none; opacity: .85; transition: opacity .18s, transform .18s; }
 .dw-badge:hover { opacity: 1; transform: translateY(-1px); text-decoration: none; color: #fff; }
@@ -725,7 +723,7 @@ table.simple-table tr:last-child td { border-bottom: none; }
 .portal-side .shot { box-shadow: 0 12px 34px rgba(0,0,0,.35); }
 .feature-row:has(.shot-visual) { grid-template-columns: 0.8fr 1.2fr; gap: 44px; }
 @media (max-width: 900px) { .feature-row:has(.shot-visual) { grid-template-columns: 1fr; } }
-.band-navy .stat-strip { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; text-align: left; }
-.feature-card .card-link { color: var(--blue-600); font-weight: 700; font-size: .9rem; }
 .feature-row.reverse:has(.shot-visual) { grid-template-columns: 1.2fr 0.8fr; }
 @media (max-width: 900px) { .feature-row.reverse:has(.shot-visual) { grid-template-columns: 1fr; } }
+.band-navy .stat-strip { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; text-align: left; }
+.feature-card .card-link { color: var(--blue-600); font-weight: 700; font-size: .9rem; }

@@ -113,9 +113,9 @@ label { color: var(--text); }
 .feature-card .card-link { color: var(--coral); }
 
 /* Draigworks wordmark as the site logo */
-.brand img.dw-logo { width: auto; height: 28px; background: none; border-radius: 0; padding: 0; }
-.site-footer .brand img.dw-logo { height: 24px; }
 .site-header .brand { gap: 12px; }
 .site-header .brand > span { font-size: 1rem; }
 .nav-links { gap: 20px; }
 @media (min-width: 1141px) { .nav-links a { font-size: .9rem; } }
+.brand img.dw-logo { width: auto; height: 28px; background: none; border-radius: 0; padding: 0; }
+.site-footer .brand img.dw-logo { height: 24px; }

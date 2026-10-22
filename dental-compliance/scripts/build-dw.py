@@ -34,6 +34,7 @@ for p in PAGES:
     s = (ROOT / p).read_text(encoding="utf-8")
     s = re.sub(r'<img src="img/logo-header\.png"[^>]*>', LOGO, s)
     s = rebrand(s)
+    s = s.replace('img/screens/', 'img/screens-dw/')   # portal screenshots in the Draigworks theme
     s = re.sub(r'<link rel="icon"[^>]*>', '<link rel="icon" href="img/draigworks-favicon.ico" sizes="any">', s)
     s = re.sub(r'<link rel="apple-touch-icon"[^>]*>', '<link rel="apple-touch-icon" href="img/draigworks-touch-icon.png">', s)
     s = s.replace("<html lang=\"en\">", '<html lang="en" data-brand="' + BRAND + '">', 1)

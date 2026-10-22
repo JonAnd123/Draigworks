@@ -168,3 +168,4 @@ code.secret { background: rgba(255,255,255,.08); color: var(--text); }
 .auth-card .brand-row { gap: 14px; flex-wrap: wrap; }
 @media (max-width: 900px) { .auth-logo { width: 150px; height: auto; margin-bottom: 14px; } }
 .auth-card .brand-row img[src], .sidebar .brand-row img[src] { background: none; border-radius: 0; padding: 0; width: auto; height: 28px; }
+#view { min-width: 0; }

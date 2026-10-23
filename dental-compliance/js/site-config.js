@@ -9,5 +9,5 @@
    ========================================================================== */
 window.CC_CONFIG = {
   SUPABASE_URL: "https://tpeumhwzzoiqmgrjpsyu.supabase.co",
-  SUPABASE_ANON_KEY: "k5g&uzZpF/M3w7a"
+  SUPABASE_ANON_KEY: "sb_publishable_rQJ0zNxAQA2REp7J5SflJw_ai6cv17B"
 };

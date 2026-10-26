@@ -553,7 +553,7 @@ create policy invites_insert on public.invites for insert to authenticated with 
       and role in ('staff','practice_manager','inspector'))
   or (public.auth_role() = 'practice_manager' and practice_id = public.auth_practice_id()
       and role = 'staff')
-  or (public.auth_role() = 'group_admin' and role = 'principal'
+  or (public.auth_role() = 'group_admin' and role in ('principal','practice_manager','staff')
       and practice_id is not null and public.is_group_admin_of(practice_id)));
 create policy invites_delete on public.invites for delete to authenticated using (
   not claimed and (

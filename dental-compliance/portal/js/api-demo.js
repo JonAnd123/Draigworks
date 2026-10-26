@@ -350,7 +350,7 @@
           var allowed = m.role === "platform_admin"
             || (m.role === "principal" && pid === m.practice_id && ["staff", "practice_manager", "inspector"].indexOf(r) >= 0)
             || (m.role === "practice_manager" && pid === m.practice_id && r === "staff")
-            || (m.role === "group_admin" && r === "principal" && pid && isGA(pid));
+            || (m.role === "group_admin" && ["principal", "practice_manager", "staff"].indexOf(r) >= 0 && pid && isGA(pid));
           if (!allowed) return deny();
           if (db.invites.some(function (i) { return !i.claimed && i.email.toLowerCase() === row.email.toLowerCase(); })) return deny("An open invite for this email already exists");
           db.invites.push(Object.assign({ id: id("inv"), full_name: null, practice_id: null, group_id: null, claimed: false, created_at: new Date().toISOString() }, row)); save(); return ok();

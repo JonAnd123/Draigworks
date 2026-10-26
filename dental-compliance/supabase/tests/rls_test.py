@@ -69,6 +69,9 @@ _,err = invite(pm1,"staff1b@x.com","staff",p1); check("practice manager can invi
 _,err = invite(pm1,"pm2@x.com","practice_manager",p1); check("practice manager cannot invite practice manager", err is not None)
 _,err = invite(ga,"newprin@x.com","principal",p2); check("group admin can invite principal in own group", err is None)
 _,err = invite(ga,"newprin3@x.com","principal",p3); check("group admin cannot invite principal for independent practice", err is not None)
+_,err = invite(ga,"newpm@x.com","practice_manager",p2); check("group admin can invite practice manager in own group", err is None)
+_,err = invite(ga,"newst@x.com","staff",p2); check("group admin can invite staff in own group", err is None)
+_,err = invite(ga,"newga@x.com","group_admin",None); check("group admin cannot invite another group admin", err is not None)
 
 print("== Evidence")
 ev,err = as_user(pr1,"insert into evidence(practice_id,category,title,expiry_date,status) values(%s,'staff_training','DBS J',current_date+90,'verified') returning id",(p1,))

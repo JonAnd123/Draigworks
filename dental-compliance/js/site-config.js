@@ -7,6 +7,11 @@
    The anon key is designed to be public; security is enforced by the
    row-level-security rules in 01_schema.sql. NEVER paste the service_role key.
    ========================================================================== */
+/* Optional: add  FEATURE_PM_AND_VISITS: true  below to bring back "Book a
+   pre-inspection visit" and "Practice Manager training" in the portal.
+   On the marketing pages, remove the class "later" from the hidden items
+   (search for class="later" in index.html, services.html, pricing.html),
+   then run: python3 scripts/build-dw.py */
 window.CC_CONFIG = {
   SUPABASE_URL: "https://tpeumhwzzoiqmgrjpsyu.supabase.co",
   SUPABASE_ANON_KEY: "sb_publishable_rQJ0zNxAQA2REp7J5SflJw_ai6cv17B"

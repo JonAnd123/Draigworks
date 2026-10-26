@@ -81,6 +81,12 @@
         },
         disable: function (factorId) { return sb.auth.mfa.unenroll({ factorId: factorId }).then(ok); }
       },
+      getTheme: function () {
+        return sb.auth.getUser().then(function (u) { var m = u.data.user && u.data.user.user_metadata; return (m && m.theme) || null; });
+      },
+      setTheme: function (th) {
+        return sb.auth.updateUser({ data: { theme: th } }).then(function (r) { if (r.error) throw r.error; });
+      },
       getProfile: function () {
         return sb.auth.getUser().then(function (u) {
           if (!u.data.user) return null;

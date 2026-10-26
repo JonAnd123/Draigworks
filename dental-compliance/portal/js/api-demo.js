@@ -204,6 +204,8 @@
         challenge: function () { return Promise.resolve(); },
         disable: function () { db.mfa = false; save(); return Promise.resolve(); }
       },
+      getTheme: function () { var u = me(); try { return Promise.resolve(u ? localStorage.getItem("cc_theme_u_" + u.id) : null); } catch (e) { return Promise.resolve(null); } },
+      setTheme: function (th) { var u = me(); try { if (u) localStorage.setItem("cc_theme_u_" + u.id, th); } catch (e) {} return Promise.resolve(); },
       getProfile: function () { return ok(me() || null); },
 
       practices: {

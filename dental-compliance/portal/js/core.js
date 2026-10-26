@@ -5,6 +5,8 @@
 
   CC.cfg = window.CC_CONFIG || {};
   CC.live = !!(CC.cfg.SUPABASE_URL && CC.cfg.SUPABASE_ANON_KEY);
+  // Pre-inspection visits and Practice Manager training are switched off for now. Set FEATURE_PM_AND_VISITS: true in js/site-config.js to bring them back.
+  CC.features = { pmAndVisits: !!CC.cfg.FEATURE_PM_AND_VISITS };
   CC.lang = (function () { try { return localStorage.getItem("cc_lang") || "en"; } catch (e) { return "en"; } })();
   CC.CATS = window.CCScoring.CATS;
   CC.charts = [];

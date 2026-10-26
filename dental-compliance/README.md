@@ -93,3 +93,8 @@ browser to preview changes before uploading.
 - `/dw/` — Draigworks-themed copies of the marketing pages (`dw/index.html` etc., `css/theme-draigworks.css`). Generated: after editing a root page run `python3 scripts/build-dw.py`. They are marked noindex so they don't compete with the main pages in search.
 
 All themes and the marketing site footer show a "Powered by Draigworks" badge linking to https://www.draigworks.uk (transparent logos in `img/draigworks-white.png` / `-dark.png`, injected by `portal/js/app.js` and `js/main.js`).
+
+## Theme choice and hidden features
+
+- **Draig portal** (`portal/draigworks.html`) opens in the dark theme. Under Settings, Appearance, each user can switch to Light (the Cymru colours). The choice is stored per login (Supabase `user_metadata.theme`; in demo mode, browser storage) and applied after sign-in. `portal/js/theme.js` does the switching; no database change is needed.
+- **Pre-inspection visits and Practice Manager training** are hidden for now. Portal: set `FEATURE_PM_AND_VISITS: true` in `js/site-config.js` to bring them back. Marketing pages: remove the class `later` from the hidden items in `index.html`, `services.html` and `pricing.html`, then run `python3 scripts/build-dw.py`.

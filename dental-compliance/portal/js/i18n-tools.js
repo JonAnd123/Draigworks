@@ -49,7 +49,7 @@
     "Hand hygiene & PPE": "Hylendid dwylo ac offer diogelu personol", "Surgery & environment": "Meddygfa ac amgylchedd", "Sharps & waste": "Eitemau miniog a gwastraff", "Patient details & history": "Manylion a hanes y claf",
     "Examination & diagnosis": "Archwilio a diagnosis", "Treatment & consent": "Triniaeth a chydsyniad", "Radiographs & referrals": "Radiograffau a chyfeiriadau", "Prescribing decisions": "Penderfyniadau presgripsiynu",
     "Safety & follow-up": "Diogelwch a dilyniant", "Running the survey": "Cynnal yr arolwg", "Acting on results": "Gweithredu ar ganlyniadau", "Getting in": "Mynd i mewn", "Facilities": "Cyfleusterau", "Information & people": "Gwybodaeth a phobl",
-    "Maintenance": "Cynnal a chadw", "Health & safety": "Iechyd a diogelwch"
+    "Appearance": "Edrychiad", "Choose how the portal looks. Your choice is remembered each time you sign in.": "Dewiswch sut mae'r porth yn edrych. Cofir eich dewis bob tro y byddwch yn mewngofnodi.", "Dark (default)": "Tywyll (rhagosodiad)", "Light": "Golau", "Maintenance": "Cynnal a chadw", "Health & safety": "Iechyd a diogelwch"
   };
   Object.keys(add).forEach(function (k) { if (!(k in cy)) cy[k] = add[k]; });
 })();

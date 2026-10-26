@@ -413,7 +413,7 @@ section.tight { padding: 48px 0; }
 /* ---- Tables (pricing) ---- */
 .price-grid {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
   gap: 20px;
   align-items: stretch;
 }
@@ -727,3 +727,7 @@ table.simple-table tr:last-child td { border-bottom: none; }
 @media (max-width: 900px) { .feature-row.reverse:has(.shot-visual) { grid-template-columns: 1fr; } }
 .band-navy .stat-strip { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; text-align: left; }
 .feature-card .card-link { color: var(--blue-600); font-weight: 700; font-size: .9rem; }
+
+/* Features switched off for now (pre-inspection visits and Practice Manager training).
+   Delete this rule (and re-run scripts/build-dw.py) to bring them back. */
+.later { display: none !important; }

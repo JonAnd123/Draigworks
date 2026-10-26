@@ -171,7 +171,7 @@
         }).join("") + "</ul></div>";
       }
       el.innerHTML = '<div class="page-head"><div><h1>' + esc(t("Team training")) + "</h1><p class=\"muted\">" + esc(t("Assign induction, refresher and Practice Manager training. Completion feeds the dashboard.")) + "</p></div>" +
-        '<div class="actions"><button class="btn btn-primary" data-act="assign-induction">' + esc(t("New starter: assign full induction")) + '</button><a class="btn btn-secondary" href="#/bookings">' + esc(t("Book Practice Manager training")) + "</a></div></div>" +
+        '<div class="actions"><button class="btn btn-primary" data-act="assign-induction">' + esc(t("New starter: assign full induction")) + '</button>' + (CC.features.pmAndVisits ? '<a class="btn btn-secondary" href="#/bookings">' + esc(t("Book Practice Manager training")) + "</a>" : "") + "</div></div>" +
         '<div class="panel"><h3>' + esc(t("Team progress")) + "</h3>" +
         (assigns.length ? '<div class="table-wrap"><table class="data"><thead><tr><th>' + esc(t("Person")) + "</th><th>" + esc(t("Module")) + "</th><th>" + esc(t("Due")) + "</th><th style=\"min-width:140px\">" + esc(t("Progress")) + "</th><th>" + esc(t("Status")) + "</th></tr></thead><tbody>" +
           assigns.map(function (a) {
@@ -179,7 +179,7 @@
             var overdue = a.status !== "completed" && a.due_date && SC.daysUntil(a.due_date) < 0;
             return "<tr><td>" + esc(nameOf(people, a.profile_id)) + "</td><td>" + esc(modTitle(m)) + "</td><td>" + esc(CC.fmtDate(a.due_date)) + (overdue ? " " + CC.chip("red", t("Overdue")) : "") + "</td><td>" + pct(a.progress) + "</td><td>" + CC.chip(TRAIN_CHIP[a.status][0], t(TRAIN_CHIP[a.status][1])) + "</td></tr>";
           }).join("") + "</tbody></table></div>" : '<div class="empty">' + esc(t("Nothing assigned yet.")) + "</div>") + "</div>" +
-        '<div class="cols-2" style="margin-top:16px">' + modCard("induction") + modCard("refresher") + "</div>" + '<div style="margin-top:16px">' + modCard("pm") + "</div>";
+        '<div class="cols-2" style="margin-top:16px">' + modCard("induction") + modCard("refresher") + "</div>" + (CC.features.pmAndVisits ? '<div style="margin-top:16px">' + modCard("pm") + "</div>" : "");
 
       function assignModal(mods, label) {
         CC.modal({

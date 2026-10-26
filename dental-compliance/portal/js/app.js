@@ -43,6 +43,8 @@
     inspector:        ["inspect", "settings"],
     platform_admin:   ["users", "orgs", "enquiries", "bookings", "dashboard", "evidence", "check", "audits", "tasks", "logs", "maintenance", "staffcompliance", "hr", "audit", "settings"]
   };
+  var OFF_ROUTES = CC.features && CC.features.pmAndVisits ? [] : ["bookings"];
+  Object.keys(NAV).forEach(function (r) { NAV[r] = NAV[r].filter(function (id) { return OFF_ROUTES.indexOf(id) < 0; }); });
   var MULTI = ["platform_admin", "group_admin", "inspector"];
 
   CC.role = function () { return S.profile ? S.profile.role : null; };
@@ -55,7 +57,7 @@
   CC.refresh = function () { return CC.render(); };
 
   /* ---------- auth screens ---------- */
-  function poweredBadge(onDark) { return '<a class="dw-badge" href="https://www.draigworks.uk" target="_blank" rel="noopener" title="Draigworks"><span>Powered by</span><img src="' + "brand/draigworks-" + (onDark ? "white" : "dark") + ".png" + '" alt="Draigworks" width="110" height="29"></a>'; }
+  function poweredBadge(onDark) { return '<a class="dw-badge" href="https://www.draigworks.uk" target="_blank" rel="noopener" title="Draigworks"><span>Powered by</span><img src="' + "brand/draigworks-white.png" + '" alt="Draigworks" width="110" height="29"></a>'; }
   function authCard(html) { $("auth-card").innerHTML = html + poweredBadge(); }
   var BRAND = window.CC_BRAND || { name: "Cymru Compliance", logo: "../img/logo-header.png" };
   function brandRow() { return '<div class="brand-row"><img src="' + BRAND.logo + '" alt="" width="40" height="40" onerror="this.style.display=\'none\'"><span>' + CC.esc(BRAND.name) + "</span></div>"; }
@@ -75,7 +77,7 @@
   function renderAuth(mode, note) {
     $("boot").hidden = true; $("app").hidden = true; $("auth").hidden = false;
     $("auth-title").textContent = CC.t("Your HIW inspection-readiness portal");
-    $("auth-sub").textContent = CC.t("Dashboard, evidence, training and bookings in one secure place — in English and Welsh.");
+    $("auth-sub").textContent = CC.t("Dashboard, evidence, training and compliance records in one secure place — in English and Welsh.");
     $("auth-card").setAttribute("data-mode", mode);
     var T = CC.t;
 
@@ -84,7 +86,7 @@
         '<form id="f-signin"><div class="field"><label for="si-email">' + CC.esc(T("Email")) + '</label><input id="si-email" type="email" required autocomplete="username"></div>' +
         '<div class="field"><label for="si-pw">' + CC.esc(T("Password")) + '</label><input id="si-pw" type="password" required autocomplete="current-password"></div>' +
         '<button class="btn btn-primary btn-block" type="submit">' + CC.esc(T("Sign in")) + '</button>' +
-        '<p style="margin-top:14px"><button type="button" class="link-btn" data-tab="reset">' + CC.esc(T("Forgot your password?")) + '</button></p><p class="small muted" style="margin-top:6px">' + CC.esc(T("No account yet?")) + ' <a href="../portal.html">' + CC.esc(T("Request access")) + "</a></p></form>" + demoBox());
+        '<p style="margin-top:14px"><button type="button" class="link-btn" data-tab="reset">' + CC.esc(T("Forgot your password?")) + '</button></p><p class="small muted" style="margin-top:6px">' + CC.esc(T("No account yet?")) + ' <a href="' + (BRAND.requestUrl || "../portal.html") + '">' + CC.esc(T("Request access")) + "</a></p></form>" + demoBox());
       $("auth-card").querySelector('[data-tab="reset"]').onclick = function () { renderAuth("reset"); };
       $("f-signin").onsubmit = function (e) {
         e.preventDefault();
@@ -177,7 +179,7 @@
         S.practiceId = (p.practice_id && S.practices.some(function (x) { return x.id === p.practice_id; })) ? p.practice_id : (S.practices[0] ? S.practices[0].id : null);
         var needMfa = (p.role === "principal" || p.role === "group_admin") && CC.api.mode === "live";
         return (needMfa ? CC.api.mfa.status().then(function (m) { S.mfaNudge = !m.enrolled; }, function () {}) : Promise.resolve());
-      }).then(function () {
+      }).then(function () { return CC.theme ? CC.theme.load() : null; }).then(function () {
         buildShell();
         if (!location.hash || location.hash === "#") location.hash = "#/" + NAV[p.role][0]; else CC.render();
       });
@@ -245,7 +247,7 @@
     if (!S.profile) return Promise.resolve();
     var route = (location.hash || "").replace(/^#\//, "").split("?")[0];
     var role = S.profile.role;
-    if (!ROUTES[route] || ROUTES[route].roles.indexOf(role) < 0) { location.hash = "#/" + NAV[role][0]; return Promise.resolve(); }
+    if (!ROUTES[route] || ROUTES[route].roles.indexOf(role) < 0 || OFF_ROUTES.indexOf(route) >= 0) { location.hash = "#/" + NAV[role][0]; return Promise.resolve(); }
     S.route = route;
     document.body.classList.remove("nav-open");
     document.querySelectorAll("#side-nav a").forEach(function (a) { a.classList.toggle("active", a.getAttribute("data-route") === route || (route === "dashboard" && a.getAttribute("data-route") === "group" && role === "group_admin") || (route === "hr" && a.getAttribute("data-route") === "hrgroup" && role === "group_admin")); });

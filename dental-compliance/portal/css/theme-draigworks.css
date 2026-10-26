@@ -169,3 +169,6 @@ code.secret { background: rgba(255,255,255,.08); color: var(--text); }
 @media (max-width: 900px) { .auth-logo { width: 150px; height: auto; margin-bottom: 14px; } }
 .auth-card .brand-row img[src], .sidebar .brand-row img[src] { background: none; border-radius: 0; padding: 0; width: auto; height: 28px; }
 #view { min-width: 0; }
+
+/* larger wordmark above the sign-in fields */
+.auth-card .brand-row img[src], .auth-card .brand-row img { height: 40px; width: auto; object-fit: contain; }

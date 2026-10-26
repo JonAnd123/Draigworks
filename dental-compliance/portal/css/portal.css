@@ -400,3 +400,12 @@ table.mx-wide .sticky { position:sticky; left:0; background:#fff; z-index:1; min
 .dw-badge img { height: 24px; width: auto; display: block; }
 .sidebar .side-foot .dw-badge { margin: 12px 0 0; width: 100%; color: rgba(255,255,255,.7); }
 .sidebar .side-foot #back-site { display: block; margin-bottom: 2px; }
+
+/* Light theme on pages that also ship a dark stylesheet: use dark logo variants on white surfaces */
+html[data-theme="light"] .auth-card .dw-badge img { content: url("../brand/draigworks-dark.png"); }
+html[data-theme="light"] .auth-card .brand-row img[src*="draigworks-white"], html[data-theme="light"] .auth-logo[src*="draigworks-white"] { content: url("../../img/draigworks-dark.png"); }
+
+/* Draigworks wordmark: keep its proportions in either theme */
+.brand-row img[src*="draigworks"] { width: auto; height: 36px; object-fit: contain; }
+.sidebar .brand-row img[src*="draigworks"] { height: 28px; }
+html[data-theme="light"] .sidebar .brand-row img[src*="draigworks"] { background: none; padding: 0; box-shadow: none; border-radius: 0; }

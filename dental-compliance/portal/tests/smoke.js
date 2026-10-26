@@ -16,8 +16,8 @@ async function newApp(userId, lang) {
   w.URL.createObjectURL = () => "blob:demo";
   w.print = () => {}; w.open = () => {};
   if (lang) w.localStorage.setItem("cc_lang", lang);
-  const files = ["js/site-config.js", "portal/js/scoring.js", "portal/js/core.js","portal/js/hr-core.js", "portal/js/i18n.js","portal/js/i18n-hr.js", "portal/js/i18n-train.js", "portal/js/i18n-tools.js", "portal/js/demo-content.js", "portal/js/tools-content.js", "portal/js/audit-content.js", "portal/js/demo-hr.js", "portal/js/demo-tools.js","portal/js/api-demo.js", "portal/js/api-supabase.js", "portal/js/views-dashboard.js", "portal/js/views-practice.js", "portal/js/views-group.js", "portal/js/views-admin.js", "portal/js/views-hr.js", "portal/js/views-train.js", "portal/js/views-tasks.js", "portal/js/views-compliance.js","portal/js/app.js"];
-  for (const f of files) w.eval(fs.readFileSync(path.join(ROOT, f), "utf8") + "\n//# sourceURL=" + f);
+  const files = ["js/site-config.js", "portal/js/scoring.js", "portal/js/theme.js", "portal/js/core.js","portal/js/hr-core.js", "portal/js/i18n.js","portal/js/i18n-hr.js", "portal/js/i18n-train.js", "portal/js/i18n-tools.js", "portal/js/demo-content.js", "portal/js/tools-content.js", "portal/js/audit-content.js", "portal/js/demo-hr.js", "portal/js/demo-tools.js","portal/js/api-demo.js", "portal/js/api-supabase.js", "portal/js/views-dashboard.js", "portal/js/views-practice.js", "portal/js/views-group.js", "portal/js/views-admin.js", "portal/js/views-hr.js", "portal/js/views-train.js", "portal/js/views-tasks.js", "portal/js/views-compliance.js","portal/js/app.js"];
+  for (const f of files) { w.eval(fs.readFileSync(path.join(ROOT, f), "utf8") + "\n//# sourceURL=" + f); if (f === "js/site-config.js") w.CC_CONFIG.FEATURE_PM_AND_VISITS = true; }
   await sleep(60);
   if (userId) { w.document.querySelector(`[data-demo="${userId}"]`).click(); await sleep(150); }
   return { dom, w, errors, doc: w.document };

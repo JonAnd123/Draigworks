@@ -56,7 +56,7 @@
 
       el.onclick = function (e) {
         var b = e.target.closest("[data-act]"); if (!b || b.getAttribute("data-act") !== "assign") return;
-        var kinds = [["induction", "Induction"], ["refresher", "Refresher training"], ["pm", "Practice Manager Training"]];
+        var kinds = [["induction", "Induction"], ["refresher", "Refresher training"]].concat(CC.features.pmAndVisits ? [["pm", "Practice Manager Training"]] : []);
         CC.modal({
           title: t("Assign training across practices"), submitLabel: "Assign",
           body:

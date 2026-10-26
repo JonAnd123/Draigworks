@@ -19,7 +19,7 @@ window.CC_CY = {
 
   /* auth */
   "Your HIW inspection-readiness portal": "Eich porth parodrwydd arolygu HIW",
-  "Dashboard, evidence, training and bookings in one secure place — in English and Welsh.": "Dangosfwrdd, tystiolaeth, hyfforddiant ac archebion mewn un lle diogel — yn Gymraeg a Saesneg.",
+  "Dashboard, evidence, training and compliance records in one secure place — in English and Welsh.": "Dangosfwrdd, tystiolaeth, hyfforddiant a chofnodion cydymffurfio mewn un lle diogel — yn Gymraeg a Saesneg.",
   "Sign in": "Mewngofnodi", "Create account": "Creu cyfrif", "Email": "E-bost", "Password": "Cyfrinair", "Full name": "Enw llawn",
   "Forgot your password?": "Wedi anghofio eich cyfrinair?", "No account yet?": "Dim cyfrif eto?", "Request access": "Gofyn am fynediad", "Password (at least 10 characters)": "Cyfrinair (o leiaf 10 nod)",
   "Accounts are by invitation only. Use the email address your Principal or Group Admin invited.": "Mae cyfrifon trwy wahoddiad yn unig. Defnyddiwch y cyfeiriad e-bost y gwnaeth eich Prif Ddeintydd neu Weinyddwr Grŵp eich gwahodd arno.",

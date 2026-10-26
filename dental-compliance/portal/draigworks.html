@@ -10,7 +10,7 @@
 <link rel="stylesheet" href="../css/style.css">
 <link rel="stylesheet" href="css/portal.css">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&family=Space+Grotesk:wght@400;500;600;700&display=swap">
-<link rel="stylesheet" href="css/theme-draigworks.css">
+<link rel="stylesheet" href="css/theme-draigworks.css" id="cc-theme-css">
 </head>
 <body class="portal">
 <div id="boot">Loading…</div>
@@ -20,7 +20,7 @@
   <div class="auth-side">
     <img class="auth-logo" src="../img/draigworks-white.png" alt="Draigworks" width="155" height="41" onerror="this.style.display='none'">
     <h1 id="auth-title">Your HIW inspection-readiness portal</h1>
-    <p id="auth-sub">Dashboard, evidence, training and bookings in one secure place — in English and Welsh.</p>
+    <p id="auth-sub">Dashboard, evidence, training and compliance records in one secure place — in English and Welsh.</p>
   </div>
   <div class="auth-main"><div class="auth-card" id="auth-card"></div></div>
 </div>
@@ -49,11 +49,13 @@
 </div>
 <div id="toasts" aria-live="polite"></div>
 
-<script>window.CC_BRAND = { name: "Draig Dental Compliance", logo: "../img/draigworks-white.png" };</script>
+<script>window.CC_BRAND = { name: "Draig Dental Compliance", logo: "../img/draigworks-white.png", requestUrl: "../dw/portal.html" };</script>
 <script src="../js/site-config.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="js/scoring.js"></script>
+<script>window.CC_DEFAULT_THEME = "dark";</script>
+<script src="js/theme.js"></script>
 <script src="js/core.js"></script>
 <script src="js/hr-core.js"></script>
 <script src="js/i18n.js"></script>

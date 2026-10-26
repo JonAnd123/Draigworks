@@ -77,7 +77,7 @@ var CY_I18N = {
 
     "features-eyebrow": "Y platfform",
     "features-title": "Popeth sydd ei angen ar bractis i aros yn barod — mewn un lle",
-    "features-sub": "Un mewngofnodiad ar gyfer y llwyth gwaith cydymffurfio cyfan: tystiolaeth, hyfforddiant, hunanasesu, a chefnogaeth arbenigol pan mae ei hangen fwyaf.",
+    "features-sub": "Un mewngofnodiad ar gyfer y llwyth gwaith cydymffurfio cyfan: tystiolaeth, AD, hyfforddiant, hunanasesu ac archwiliadau.",
 
     "feat-dashboard-title": "Dangosfwrdd Cydymffurfiaeth",
     "feat-dashboard-body": "Statws coch/oren/gwyrdd un sgrin ar draws cofrestru, hyfforddiant staff, diheintio, diogelu ymbelydredd, iechyd a diogelwch a pholisïau.",
@@ -122,7 +122,7 @@ var CY_I18N = {
     "journey-2-title": "Llwytho i fyny ac asesu",
     "journey-2-body": "Llwythwch eich tystiolaeth, cynhaliwch hyfforddiant sefydlu, a chwblhewch eich gwiriad cydymffurfio hunanasesu cyntaf.",
     "journey-3-title": "Cau'r bylchau",
-    "journey-3-body": "Gweithiwch trwy restr gweithredu'r dangosfwrdd, archebwch ymweliad cyn-arolygiad, neu gofrestrwch eich rheolwr practis ar hyfforddiant.",
+    "journey-3-body": "Gweithiwch trwy restr gweithredu\'r dangosfwrdd a chaewch y bylchau cyn yr arolygiad.",
     "journey-4-title": "Diwrnod yr arolygiad",
     "journey-4-body": "Rhowch fynediad darllen-yn-unig wedi'i amseru i'ch arolygydd HIW, yn adlewyrchu'n union sut maen nhw'n arolygu.",
 
@@ -204,7 +204,7 @@ var CY_I18N = {
     "alert-li-2": "E-bost cryno fel nad oes rhaid i neb gofio mewngofnodi",
     "alert-li-3": "Mae Gweinyddwyr Grŵp yn gweld rhybuddion ar draws pob practis",
     "svc-nav-alert": "Rhybuddion Cyn i Unrhyw Beth Ddod i Ben",
-    "svc-sub": "O dystiolaeth, AD, tasgau a logiau o ddydd i ddydd i baratoi arolygiad dan arweiniad arbenigwr — wedi'i adeiladu o amgylch y categorïau y mae HIW yn eu harolygu mewn gwirionedd.",
+    "svc-sub": "O dystiolaeth, AD, tasgau a logiau o ddydd i ddydd hyd at hunanasesu ac archwiliadau — wedi'i adeiladu o amgylch y categorïau y mae HIW yn eu harolygu mewn gwirionedd.",
     "groups-svc-li-7": "AD Grŵp: staff, gwyliau a chofrestriadau sy'n dod i ben ar draws pob safle mewn un crynodeb",
     "groups-svc-li-8": "Hyfforddiant grŵp: neilltuo cwrs i practisau dethol ar unwaith a thracio cwblhau mewn un matrics",
     "groups-svc-li-9": "Cydymffurfiaeth staff, cynnal a chadw a thasgau wedi'u crynhoi fesul practis, gyda log archwilio llawn o fynediad lefel grŵp",
@@ -216,7 +216,6 @@ var CY_I18N = {
     "gal-4": "Cynnal a chadw a thasgau, safle wrth safle",
     "svc-eyebrow": "Y platfform",
     "svc-title": "Un mewngofnodiad. Pob rhan o'ch llwyth gwaith cydymffurfio.",
-    "svc-sub": "O olrhain tystiolaeth o ddydd i ddydd i baratoi arolygiad dan arweiniad arbenigwr — wedi'i adeiladu o amgylch y categorïau y mae HIW yn eu harolygu go iawn.",
     "svc-nav-1": "Dangosfwrdd",
     "svc-nav-2": "Tystysgrifau a Thystiolaeth",
     "svc-nav-3": "Hyfforddiant Sefydlu",

@@ -413,3 +413,7 @@ html[data-theme="light"] .sidebar .brand-row img[src*="draigworks"] { background
 /* Wordmark on the navy left panel (light theme): white, unboxed, proportional */
 .auth-logo[src*="draigworks"] { width: 220px; height: auto; background: none; border-radius: 0; padding: 0; box-shadow: none; margin: 0 auto 34px; object-fit: contain; }
 @media (max-width: 900px) { .auth-logo[src*="draigworks"] { width: 150px; margin-bottom: 14px; } }
+
+/* Sign-in card: wordmark with the product name underneath, smaller */
+.auth-card .brand-row:has(img[src*="draigworks"]) { flex-direction: column; align-items: flex-start; gap: 8px; }
+.auth-card .brand-row:has(img[src*="draigworks"]) span { font-size: .95rem; font-weight: 600; }

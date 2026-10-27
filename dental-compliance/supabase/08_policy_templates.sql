@@ -6,8 +6,8 @@
 --     the platform admin only.
 --   * Principals / Practice Managers (and Group Admins, for practices in their group)
 --     edit their practice's copy or replace it with an uploaded file.
---   * Staff can read their practice's policies (text, or an uploaded file shown in the
---     browser) and sign them off.
+--   * Staff can read their practice's ADOPTED policies (text, or an uploaded file shown in the
+--     browser) and sign them off. Templates not yet adopted are hidden from staff.
 --   * A policy copy only counts towards the compliance score once it has been adopted.
 -- Run once in the Supabase SQL editor after 01-07. Safe to re-run: the text is only
 -- replaced (and its version raised) when it has changed.
@@ -49,7 +49,11 @@ end $$;
 -- ---------- row-level security ----------
 drop policy if exists evidence_policy_select on public.evidence;
 create policy evidence_policy_select on public.evidence for select to authenticated using (
-  policy_id is not null and public.can_read_practice(practice_id));
+  policy_id is not null and public.can_read_practice(practice_id)
+  and (adopted_at is not null                      -- staff only see policies the practice has adopted
+       or public.can_manage_practice(practice_id)
+       or public.is_group_admin_of(practice_id)
+       or public.has_inspector_grant(practice_id)));
 
 drop policy if exists evidence_policy_ga_update on public.evidence;
 create policy evidence_policy_ga_update on public.evidence for update to authenticated

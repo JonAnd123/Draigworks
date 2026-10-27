@@ -386,7 +386,7 @@ const ROLES = [["u_admin", "platform_admin"], ["u_ga", "group_admin"], ["u_pr1",
   ok("logs: entries are immutable via API", !A.logs.update && !A.logs.remove);
   let pdenied = false; try { await A.logs.add({ practice_id: "p2", log_type: "fridge", data: {} }); } catch (e) { pdenied = true; } ok("logs: cannot log into another practice", pdenied);
   await go(app, "policies");
-  ok("policies: library listed with to-review count", view(app).querySelectorAll("tbody tr").length === 23 && /Policies to review/.test(view(app).innerHTML));
+  ok("policies: library listed with to-review count", view(app).querySelectorAll("tbody tr").length === 20 && /Policies to review/.test(view(app).innerHTML));
   const toRev = [...view(app).querySelectorAll("tbody tr")].filter(r => /To review/.test(r.innerHTML)).length;
   const firstTodo = [...view(app).querySelectorAll("tbody tr")].find(r => /To review/.test(r.innerHTML)).querySelector("button");
   firstTodo.click(); await sleep(60);

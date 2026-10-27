@@ -303,6 +303,7 @@ rows,_ = as_user(pr2,"select id from log_entries where practice_id=%s",(p1,)); c
 
 print("== Compliance tools: policies")
 pol = su("select id, version from policies order by id limit 1")[0]
+su("update evidence set adopted_at=now() where policy_id=%s and practice_id=%s",(pol["id"],p1))  # staff can only sign adopted policies
 rows,_ = as_user(staff1,"select id from policies"); check("everyone can read the policy library", len(rows)>=10)
 _,err = as_user(staff1,"insert into policies(ref,title_en) values('X1','Hack')"); check("staff cannot edit policy library", err is not None)
 _,err = as_user(staff1,"insert into policy_reviews(policy_id,profile_id,practice_id,version) values(%s,%s,%s,%s)",(pol["id"],staff1,p1,pol["version"])); check("staff signs off a policy", err is None)
@@ -310,6 +311,7 @@ _,err = as_user(staff1,"insert into policy_reviews(policy_id,profile_id,practice
 _,err = as_user(staff1,"insert into policy_reviews(policy_id,profile_id,practice_id,version) values(%s,%s,%s,99)",(pol["id"],staff1,p1)); check("cannot sign a non-current version", err is not None)
 rows,_ = as_user(pr1,"select * from policy_reviews"); check("manager reads practice sign-offs", len(rows)==1)
 rows,_ = as_user(pr2,"select * from policy_reviews"); check("other practice cannot read sign-offs", len(rows)==0)
+su("update evidence set adopted_at=null where policy_id=%s and practice_id=%s",(pol["id"],p1))
 
 
 print("== Policy templates linked to evidence")
@@ -318,7 +320,7 @@ check("23 master policies", n_master == 23)
 check("every practice has a copy of every policy", all(su("select count(*) c from evidence where policy_id is not null and practice_id=%s",(pp,))[0]["c"]==n_master for pp in (p1,p2,p3)))
 check("copies carry the practice name", su("select body from evidence where policy_id is not null and practice_id=%s limit 1",(p1,))[0]["body"].find("{{practice}}")<0)
 r,_ = as_user(pr1,"select practice_inputs(%s) as x",(p1,)); n_before = len(r[0]["x"]["evidence"])
-rows,_ = as_user(staff1,"select id from evidence where policy_id is not null"); check("staff can read their practice's policies", len(rows)==n_master)
+rows,_ = as_user(staff1,"select id from evidence where policy_id is not null"); check("staff cannot see policies the practice has not adopted", len(rows)==0)
 rows,_ = as_user(pr2,"select id from evidence where policy_id is not null and practice_id=%s",(p1,)); check("other practice cannot read these policies", len(rows)==0)
 rows,_ = as_user(ga,"select id from evidence where policy_id is not null"); check("group admin reads policies of group practices only", len(rows)==n_master*2 or len(rows)==n_master*3)
 rows,_ = as_user(insp,"select id from evidence where policy_id is not null"); check("inspector reads policies of a granted practice only", len(rows) in (0, n_master))
@@ -326,6 +328,7 @@ pe = su("select id, policy_id from evidence where policy_id is not null and prac
 _,err = as_user(staff1,"update evidence set body='hacked' where id=%s",(pe["id"],)); check("staff cannot edit a policy copy", su("select body from evidence where id=%s",(pe["id"],))[0]["body"]!="hacked")
 _,err = as_user(pr1,"update evidence set body='Our own text', adopted_at=now(), status='verified', current_version=current_version+1, expiry_date=current_date+300 where id=%s",(pe["id"],))
 check("principal can edit and adopt their copy", err is None and su("select body from evidence where id=%s",(pe["id"],))[0]["body"]=="Our own text")
+rows,_ = as_user(staff1,"select id from evidence where policy_id is not null"); check("staff can read a policy once it is adopted", len(rows)==1)
 _,err = as_user(pr1,"update evidence set policy_id=null where id=%s",(pe["id"],)); check("policy link cannot be removed", err is not None)
 _,err = as_user(pr2,"update evidence set body='x' where id=%s",(pe["id"],)); check("other principal cannot edit it", su("select body from evidence where id=%s",(pe["id"],))[0]["body"]=="Our own text")
 r,_ = as_user(pr1,"select practice_inputs(%s) as x",(p1,)); check("adopted policy counts towards the score input", len(r[0]["x"]["evidence"])==n_before+1)

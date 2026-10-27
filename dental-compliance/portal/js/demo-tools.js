@@ -222,7 +222,8 @@
           if (!X.me()) return ok([]);
           if (!pid) return ok(D().policies);
           if (!(X.canRead(pid) || X.isGA(pid))) return ok([]);
-          return ok(D().evidence.filter(function (e) { return e.practice_id === pid && e.policy_id; }).map(flat).sort(function (a, b) { return a.ref.localeCompare(b.ref); }));
+          var staffOnly = X.me().role === "staff";
+          return ok(D().evidence.filter(function (e) { return e.practice_id === pid && e.policy_id && (!staffOnly || e.adopted_at); }).map(flat).sort(function (a, b) { return a.ref.localeCompare(b.ref); }));
         },
         reviews: function (pid) {
           var me = X.me(); if (!me) return ok([]);

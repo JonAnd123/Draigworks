@@ -112,3 +112,10 @@
     "{{practice}} becomes the practice name. Details in [square brackets] are for each practice to complete.": "Mae {{practice}} yn dod yn enw'r practis. Mae manylion mewn [cromfachau sgwâr] i bob practis eu llenwi." };
   Object.keys(add).forEach(function (k) { if (!(k in cy)) cy[k] = add[k]; });
 })();
+(function () {
+  var cy = window.CC_CY = window.CC_CY || {};
+  var add = { "Preview new template": "Rhagolwg o'r templed newydd", "Newer template": "Templed mwy newydd", "New template": "Templed newydd", "Your current copy": "Eich copi presennol", "Use this template": "Defnyddio'r templed hwn",
+    "Master template v{n}, your copy was made from v{m}.": "Templed meistr f{n}, gwnaed eich copi o f{m}.", "Your copy is an uploaded file: {name}": "Mae eich copi yn ffeil a uwchlwythwyd: {name}",
+    "Replaces your copy and any uploaded file; the policy must then be adopted again.": "Yn disodli eich copi ac unrhyw ffeil a uwchlwythwyd; yna rhaid mabwysiadu'r polisi eto." };
+  Object.keys(add).forEach(function (k) { if (!(k in cy)) cy[k] = add[k]; });
+})();

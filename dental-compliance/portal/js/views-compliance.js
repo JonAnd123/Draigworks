@@ -117,7 +117,8 @@
               (canSign ? "<td>" + (mineDone(p) ? CC.chip("green", t("Reviewed")) : CC.chip("amber", t("To review"))) + "</td>" : "") +
               (manage ? "<td>" + esc(teamCount(p) + " / " + people.length) + "</td>" : "") +
               '<td class="actions-cell"><button type="button" class="btn btn-secondary btn-sm" data-act="read" data-id="' + p.id + '">' + esc(t("Read")) + "</button>" +
-              (editor ? ' <button type="button" class="btn btn-secondary btn-sm" data-act="edit" data-id="' + p.id + '">' + esc(t("Edit")) + "</button>" : "") + "</td></tr>";
+              (editor ? ' <button type="button" class="btn btn-secondary btn-sm" data-act="edit" data-id="' + p.id + '">' + esc(t("Edit")) + "</button>" : "") +
+              (editor && p.master_version > p.template_version ? ' <button type="button" class="btn btn-secondary btn-sm" data-act="preview" data-id="' + p.id + '">' + esc(t("Preview new template")) + "</button>" : "") + "</td></tr>";
           }).join("") : '<tr><td colspan="6"><div class="empty">' + esc(t("No policies match.")) + "</div></td></tr>") +
           "</tbody></table></div></div>";
       }
@@ -145,11 +146,33 @@
           };
         }
       }
+      /* compare the practice's copy with the latest master template, and optionally switch to it */
+      function openPreview(p) {
+        var prac = (S.practices || []).filter(function (x) { return x.id === pid; })[0], pname = prac ? prac.name : "";
+        var fresh = String(p.master_body || "").replace(/\{\{practice\}\}/g, pname), view = "new";
+        var m = CC.modal({ title: t("Newer template") + ": " + title(p), wide: true, hideSubmit: true,
+          body: '<p class="muted small">' + esc(p.ref) + " · " + esc(t("Master template v{n}, your copy was made from v{m}.", { n: p.master_version, m: p.template_version })) + "</p>" +
+            '<div class="seg" id="pv-seg"><button type="button" data-v="new" class="active">' + esc(t("New template")) + '</button><button type="button" data-v="mine">' + esc(t("Your current copy")) + "</button></div>" +
+            '<div class="policy-body" id="pv-body" style="margin-top:12px"></div>' +
+            '<p style="margin-top:12px"><button type="button" class="btn btn-secondary btn-sm" id="pv-use">' + esc(t("Use this template")) + '</button> <span class="small muted">' + esc(t("Replaces your copy and any uploaded file; the policy must then be adopted again.")) + "</span></p>" });
+        function show() {
+          m.el.querySelector("#pv-body").innerHTML = view === "new" ? polHtml(fresh) : (p.file_name ? '<p class="muted">' + esc(t("Your copy is an uploaded file: {name}", { name: p.file_name })) + "</p>" : polHtml(p.body_en));
+          [].forEach.call(m.el.querySelectorAll("#pv-seg button"), function (b) { b.classList.toggle("active", b.getAttribute("data-v") === view); });
+        }
+        show();
+        m.el.querySelector("#pv-seg").onclick = function (e) { var b = e.target.closest("[data-v]"); if (b) { view = b.getAttribute("data-v"); show(); } };
+        m.el.querySelector("#pv-use").onclick = function () {
+          CC.confirm(t("Replace this policy with the latest master template? Your changes and any uploaded file will be removed and the policy will need adopting again."), t("Reset")).then(function (yes) {
+            if (!yes) return;
+            CC.api.policies.reset(p).then(function () { CC.api.audit.log("reset_policy", "evidence", p.evidence_id, pid, { title: p.title_en }); m.close(); CC.toast(t("Saved.")); reload(); }).catch(CC.fail);
+          });
+        };
+      }
       function openEdit(p) {
         var exp = p.expiry_date || addMonths(today(), 12), newer = p.master_version > p.template_version;
         var m = CC.modal({ title: t("Edit policy") + ": " + title(p), wide: true, submitLabel: "Save and adopt",
           body: '<p class="muted small">' + esc(p.ref) + " · v" + p.version + " · " + esc(t("Saving adopts this policy for the practice and asks the team to read it again.")) + "</p>" +
-            (newer ? '<div class="banner info"><span>' + esc(t("The master template has been updated since this copy was made. You can keep your version or reset to the latest template.")) + "</span></div>" : "") +
+            (newer ? '<div class="banner info"><span>' + esc(t("The master template has been updated since this copy was made. You can keep your version or reset to the latest template.")) + '</span> <button type="button" class="btn btn-secondary btn-sm" id="pol-prev">' + esc(t("Preview new template")) + "</button></div>" : "") +
             (p.file_name ? '<div class="banner info"><span>' + esc(t("An uploaded file is currently shown to the team: {name}. Upload another file to replace it, or tick the box below to use the text instead.", { name: p.file_name })) + "</span></div>" : "") +
             '<div class="field"><label>' + esc(t("Policy text")) + '</label>' + CC.rte.editorHtml("body", p.body_en) + '<div class="small muted">' + esc(t("Details in [square brackets] are placeholders for you to complete.")) + "</div></div>" +
             '<div class="field"><label>' + esc(t("Or replace the text with your own document (PDF, PNG or JPG, up to 10 MB)")) + '</label><input type="file" name="file" accept=".pdf,.png,.jpg,.jpeg"><div class="small muted">' + esc(t("Staff read uploaded files in the browser and cannot download them. Other roles can download.")) + "</div></div>" +
@@ -164,6 +187,7 @@
             });
           } });
         CC.rte.attach(m.el);
+        var pv = m.el.querySelector("#pol-prev"); if (pv) pv.onclick = function () { openPreview(p); };
         m.el.querySelector("#pol-reset").onclick = function () {
           CC.confirm(t("Replace this policy with the latest master template? Your changes and any uploaded file will be removed and the policy will need adopting again."), t("Reset")).then(function (yes) {
             if (!yes) return;
@@ -176,7 +200,7 @@
         if (sg) { var v = sg.getAttribute("data-seg"); if (v === "practice" || v === "master") { polState.tab = v; CC.render(); } else { polState.filter = v; draw(); } return; }
         var b = e.target.closest("[data-act]"); if (!b) return;
         var p = pols.filter(function (x) { return String(x.id) === b.getAttribute("data-id"); })[0]; if (!p) return;
-        if (b.getAttribute("data-act") === "edit") openEdit(p); else openRead(p);
+        var act = b.getAttribute("data-act"); if (act === "edit") openEdit(p); else if (act === "preview") openPreview(p); else openRead(p);
       };
     });
   };

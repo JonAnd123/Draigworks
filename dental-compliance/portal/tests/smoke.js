@@ -460,6 +460,14 @@ const ROLES = [["u_admin", "platform_admin"], ["u_ga", "group_admin"], ["u_pr1",
   await AD.policies.saveMaster(masters[0].id, { body_en: masters[0].body_en + " (master edit)" });
   const m1 = (await AD.policies.list())[0], c1 = (await AD.policies.list("p1")).find(x => x.id === masters[0].id);
   ok("policies: master edit raises the version but does not change copies", m1.version === masters[0].version + 1 && c1.body_en.indexOf("(master edit)") < 0 && c1.master_version === m1.version);
+  const pc = await newApp("u_pr1", "en", ad); await go(pc, "policies");
+  const pbtn = pc.doc.querySelector(`[data-act="preview"][data-id="${masters[0].id}"]`);
+  ok("policies: a Preview new template button appears only where the master is newer", !!pbtn && pc.doc.querySelectorAll('[data-act="preview"]').length === 1);
+  pbtn.click(); await sleep(100);
+  ok("policies: preview shows the new master text with the practice name", /master edit/.test(modal(pc).innerHTML) && /Cardiff Bay Dental/.test(modal(pc).innerHTML) && /Use this template/.test(modal(pc).innerHTML));
+  modal(pc).querySelector('[data-v="mine"]').click(); await sleep(50);
+  ok("policies: preview can switch back to the current copy", !/master edit/.test(modal(pc).querySelector("#pv-body").innerHTML));
+  pc.dom.window.close();
   await AD.policies.addMaster({ ref: "POL99", folder: "Test", title_en: "Test policy", body_en: "Hello {{practice}}" });
   ok("policies: a new master is copied to every practice", (await AD.policies.list("p1")).length === 24 && (await AD.policies.list("p2")).length === 24);
   await go(ad, "policies"); ad.doc.querySelector('[data-seg="master"]').click(); await sleep(150);

@@ -172,3 +172,6 @@ code.secret { background: rgba(255,255,255,.08); color: var(--text); }
 
 /* larger wordmark above the sign-in fields */
 .auth-card .brand-row img[src], .auth-card .brand-row img { height: 40px; width: auto; object-fit: contain; }
+
+.pol-field { background: rgba(250,204,21,.22); color: #fde68a; }
+.pol-viewer { background: #0b1016; }

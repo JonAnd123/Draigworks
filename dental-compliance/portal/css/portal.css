@@ -421,3 +421,14 @@ html[data-theme="light"] .sidebar .brand-row img[src*="draigworks"] { background
 /* Sidebar: wordmark with the product name underneath (both themes) */
 .sidebar .brand-row:has(img[src*="draigworks"]) { flex-direction: column; align-items: flex-start; gap: 8px; }
 .sidebar .brand-row:has(img[src*="draigworks"]) span { font-size: .85rem; font-weight: 600; line-height: 1.2; }
+
+/* Policy templates */
+.policy-body h4 { margin: 18px 0 6px; font-size: 1rem; }
+.policy-body h4:first-child { margin-top: 4px; }
+.policy-body p { margin: 0 0 8px; }
+.policy-body ul { margin: 0 0 8px; padding-left: 20px; }
+.policy-body li { margin: 3px 0; }
+.pol-field { background: rgba(250,204,21,.28); color: inherit; border-radius: 4px; padding: 0 3px; }
+.pol-viewer { background: var(--slate-100, #eef1f5); border-radius: 10px; min-height: 120px; padding: 8px; }
+.pol-viewer iframe { display: block; border-radius: 6px; }
+textarea[name="body"], textarea[name="body_en"] { width: 100%; min-height: 260px; }

@@ -53,3 +53,54 @@
   };
   Object.keys(add).forEach(function (k) { if (!(k in cy)) cy[k] = add[k]; });
 })();
+
+/* Policy templates (copies per practice, editing, upload) */
+(function () {
+  var cy = window.CC_CY = window.CC_CY || {};
+  var add = {
+ "Your practice's policies. Each one starts as a template: complete the highlighted details, or replace it with your own document. Read each one and confirm you have understood it.": "Polisïau eich practis. Mae pob un yn dechrau fel templed: llenwch y manylion sydd wedi'u hamlygu, neu rhowch eich dogfen eich hun yn ei le. Darllenwch bob un a chadarnhewch eich bod wedi'i deall.",
+ "Adopted": "Wedi'i fabwysiadu",
+ "Template — to adopt": "Templed — i'w fabwysiadu",
+ "Uploaded file": "Ffeil wedi'i huwchlwytho",
+ "Newer template": "Templed mwy newydd",
+ "The master template has been updated since this copy was made.": "Mae'r templed meistr wedi'i ddiweddaru ers creu'r copi hwn.",
+ "{n} fields to complete": "{n} maes i'w llenwi",
+ "Review due": "Adolygiad yn ddyledus",
+ "Overdue": "Hwyr",
+ "Due soon": "Yn ddyledus cyn bo hir",
+ "Team reviewed": "Tîm wedi adolygu",
+ "Adopted by the practice": "Wedi'i fabwysiadu gan y practis",
+ "Adopted policies count towards the compliance score and appear under Evidence.": "Mae polisïau a fabwysiadwyd yn cyfrif tuag at y sgôr cydymffurfio ac yn ymddangos o dan Dystiolaeth.",
+ "No policies match.": "Dim polisïau'n cyfateb.",
+ "Template, not yet adopted by the practice": "Templed, heb ei fabwysiadu eto gan y practis",
+ "Loading document…": "Yn llwytho'r ddogfen…",
+ "Download": "Lawrlwytho",
+ "Edit policy": "Golygu polisi",
+ "Saving adopts this policy for the practice and asks the team to read it again.": "Mae cadw yn mabwysiadu'r polisi hwn ar gyfer y practis ac yn gofyn i'r tîm ei ddarllen eto.",
+ "The master template has been updated since this copy was made. You can keep your version or reset to the latest template.": "Mae'r templed meistr wedi'i ddiweddaru ers creu'r copi hwn. Gallwch gadw eich fersiwn neu ailosod i'r templed diweddaraf.",
+ "Policy text": "Testun y polisi",
+ "Or replace the text with your own document (PDF, PNG or JPG, up to 10 MB)": "Neu rhowch eich dogfen eich hun yn lle'r testun (PDF, PNG neu JPG, hyd at 10 MB)",
+ "Staff read uploaded files in the browser and cannot download them. Other roles can download.": "Mae staff yn darllen ffeiliau a uwchlwythwyd yn y porwr ac ni allant eu lawrlwytho. Gall rolau eraill lawrlwytho.",
+ "Remove the uploaded file and use the text above": "Tynnu'r ffeil a uwchlwythwyd a defnyddio'r testun uchod",
+ "Next review due": "Adolygiad nesaf yn ddyledus",
+ "Reset to the latest template": "Ailosod i'r templed diweddaraf",
+ "Use ## for a heading and - for a bullet point. Details in [square brackets] are placeholders for you to complete.": "Defnyddiwch ## ar gyfer pennawd a - ar gyfer pwynt bwled. Mae manylion mewn [cromfachau sgwâr] yn dalfeydd i chi eu llenwi.",
+ "Replace this policy with the latest master template? Your changes and any uploaded file will be removed and the policy will need adopting again.": "Disodli'r polisi hwn gyda'r templed meistr diweddaraf? Bydd eich newidiadau ac unrhyw ffeil a uwchlwythwyd yn cael eu tynnu a bydd angen mabwysiadu'r polisi eto.",
+ "Reset": "Ailosod",
+ "Please enter the policy text or upload a file.": "Rhowch destun y polisi neu uwchlwythwch ffeil.",
+ "Please upload a PDF, PNG or JPG file so everyone can read it in the browser.": "Uwchlwythwch ffeil PDF, PNG neu JPG fel y gall pawb ei darllen yn y porwr.",
+ "An uploaded file is currently shown to the team: {name}. Upload another file to replace it, or tick the box below to use the text instead.": "Mae ffeil a uwchlwythwyd yn cael ei dangos i'r tîm: {name}. Uwchlwythwch ffeil arall i'w disodli, neu ticiwch y blwch isod i ddefnyddio'r testun.",
+ "Practice copies": "Copïau practis",
+ "Master templates": "Templedi meistr",
+ "New policy": "Polisi newydd",
+ "Edit master template": "Golygu'r templed meistr",
+ "Title in Welsh": "Teitl yn Gymraeg",
+ "Master templates. Every practice has its own copy; editing a master does not change copies that already exist, but practices are told a newer template is available.": "Templedi meistr. Mae gan bob practis ei gopi ei hun; nid yw golygu meistr yn newid copïau sy'n bodoli eisoes, ond dywedir wrth bractisau fod templed mwy newydd ar gael.",
+ "Use ## for a heading and - for a bullet point. {{practice}} becomes the practice name. Details in [square brackets] are for each practice to complete.": "Defnyddiwch ## ar gyfer pennawd a - ar gyfer pwynt bwled. Mae {{practice}} yn dod yn enw'r practis. Mae manylion mewn [cromfachau sgwâr] i bob practis eu llenwi.",
+ "Open policy": "Agor y polisi",
+ "Template": "Templed",
+ "Policy template, not yet adopted": "Templed polisi, heb ei fabwysiadu eto",
+ "Edit": "Golygu"
+};
+  Object.keys(add).forEach(function (k) { if (!(k in cy)) cy[k] = add[k]; });
+})();

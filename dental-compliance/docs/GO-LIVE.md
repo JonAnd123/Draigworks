@@ -55,7 +55,7 @@ Time needed: about 1 to 2 hours, plus waiting for DNS.
 1. Go to supabase.com, create an account, then **New project**. Region: **London (eu-west-2)**. Choose a strong database password and store it in a password manager.
 2. Before running any SQL, open `supabase/01_schema.sql`, go to the **last lines** and set the admin e-mail to the address you will sign in with (it currently says jonathan.milton.anderson@gmail.com). That address becomes platform admin.
 3. **SQL Editor**: run these files in this order, each one in a new query, checking for errors after each:
-   `01_schema.sql`, `02_seed.sql`, `03_hr.sql`, `04_hiw_questions.sql` (if you want the 74-question HIW set; check the file header), `05_alerts_grouptraining.sql`, `06_compliance_tools.sql`.
+   `01_schema.sql`, `02_seed.sql`, `03_hr.sql`, `04_hiw_questions.sql` (if you want the 74-question HIW set; check the file header), `05_alerts_grouptraining.sql`, `06_compliance_tools.sql`, `07_group_admin_invites.sql`, `08_policy_templates.sql`.
 4. **Project Settings, API**: copy the **Project URL** and the **anon public** key. Never use or publish the `service_role` key in the site.
 5. Open `js/site-config.js` and paste both values:
    ```js

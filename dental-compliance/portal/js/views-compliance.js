@@ -58,49 +58,174 @@
     });
   };
 
-  /* ============================== Policies ============================== */
-  var polState = { filter: "all" };
+  /* ============================== Policies ==============================
+     Each practice has its own copy of every policy. A copy is an Evidence record (category "policies"), so it appears
+     in both places. It starts as a template; a Principal / Practice Manager (or a Group Admin) edits the text or
+     replaces it with an uploaded file. Staff read it in the browser (no download); everyone else can also download. */
+  var polState = { filter: "all", tab: "practice" };
+  var POL_FILE_MAX = 10 * 1024 * 1024;
+  function canEditPolicies() { var r = CC.role(); return r === "principal" || r === "practice_manager" || r === "platform_admin" || r === "group_admin"; }
+  function polFields(body) { return (String(body || "").match(/\[[^\]\n]{2,80}\]/g) || []).length; }
+  function polHtml(body) {
+    var out = [], list = false;
+    function endList() { if (list) { out.push("</ul>"); list = false; } }
+    String(body || "").split("\n").forEach(function (line) {
+      var l = esc(line).replace(/\[([^\]\n]{2,80})\]/g, '<mark class="pol-field">[$1]</mark>');
+      if (/^## /.test(line)) { endList(); out.push("<h4>" + l.slice(3) + "</h4>"); }
+      else if (/^- /.test(line)) { if (!list) { out.push("<ul>"); list = true; } out.push("<li>" + l.slice(2) + "</li>"); }
+      else if (!line.trim()) { endList(); }
+      else { endList(); out.push("<p>" + l + "</p>"); }
+    });
+    endList(); return out.join("");
+  }
+  function isImg(name) { return /\.(png|jpe?g)$/i.test(name || ""); }
+  function checkPolicyFile(f) {
+    if (!f) return;
+    if (f.size > POL_FILE_MAX) throw new Error(t("File is larger than 10 MB."));
+    if (!/\.(pdf|png|jpe?g)$/i.test(f.name)) throw new Error(t("Please upload a PDF, PNG or JPG file so everyone can read it in the browser."));
+  }
+
   CC.views.policies = function (el) {
-    var pid = S.practiceId || (S.profile && S.profile.practice_id);
-    return Promise.all([CC.api.policies.list(), pid ? CC.api.policies.reviews(pid) : Promise.resolve([]), pid ? peopleOf(pid) : Promise.resolve([])]).then(function (r) {
-      var pols = r[0], revs = r[1], people = r[2], me = S.profile, manage = canManage();
+    var role = CC.role(), pid = S.practiceId || (S.profile && S.profile.practice_id);
+    var isPlatform = role === "platform_admin", editor = canEditPolicies();
+    if (!isPlatform) polState.tab = "practice";
+    if (polState.tab === "master" && isPlatform) return CC.api.policies.list().then(function (m) { return drawMaster(el, m); });
+    if (!pid) return noPractice(el);
+    return Promise.all([CC.api.policies.list(pid), CC.api.policies.reviews(pid), peopleOf(pid)]).then(function (r) {
+      var pols = r[0], revs = r[1], people = r[2], me = S.profile, manage = canManage() || role === "group_admin";
       function mineDone(p) { return revs.some(function (v) { return v.profile_id === me.id && v.policy_id === p.id && v.version === p.version; }); }
       function teamCount(p) { return people.filter(function (u) { return revs.some(function (v) { return v.profile_id === u.id && v.policy_id === p.id && v.version === p.version; }); }).length; }
-      var canSign = ["principal", "practice_manager", "staff"].indexOf(me.role) >= 0 && !!me.practice_id;
+      var canSign = ["principal", "practice_manager", "staff"].indexOf(role) >= 0 && !!me.practice_id;
       var todo = canSign ? pols.filter(function (p) { return !mineDone(p); }).length : 0;
+      var toAdopt = pols.filter(function (p) { return !p.adopted_at; }).length;
       function title(p) { return cy() && p.title_cy ? p.title_cy : p.title_en; }
+      function statusCell(p) {
+        var bits = [p.adopted_at ? CC.chip("green", t("Adopted")) : CC.chip("amber", t("Template — to adopt"))];
+        if (p.file_name) bits.push('<span class="chip chip-none">' + esc(t("Uploaded file")) + "</span>");
+        if (editor && p.master_version > p.template_version) bits.push('<span class="chip chip-none" title="' + esc(t("The master template has been updated since this copy was made.")) + '">' + esc(t("Newer template")) + "</span>");
+        var n = p.file_name ? 0 : polFields(p.body_en);
+        if (editor && !p.file_name && n) bits.push('<span class="small muted">' + esc(t("{n} fields to complete", { n: n })) + "</span>");
+        return bits.join(" ");
+      }
+      function reviewCell(p) {
+        if (!p.adopted_at || !p.expiry_date) return '<span class="muted">—</span>';
+        var d = Math.round((new Date(p.expiry_date + "T00:00:00Z") - new Date(today() + "T00:00:00Z")) / 86400000);
+        return esc(CC.fmtDate(p.expiry_date)) + (d < 0 ? " " + CC.chip("red", t("Overdue")) : (d <= 30 ? " " + CC.chip("amber", t("Due soon")) : ""));
+      }
       function draw() {
         var rows = pols.filter(function (p) { return polState.filter === "all" || (polState.filter === "todo" ? !mineDone(p) : mineDone(p)); });
-        el.innerHTML = '<div class="page-head"><div><h1>' + esc(t("Policies")) + "</h1><p class=\"muted\">" + esc(t("Template policies to adapt for your practice. Read each one and confirm you have understood it.")) + "</p></div></div>" +
+        el.innerHTML = '<div class="page-head"><div><h1>' + esc(t("Policies")) + "</h1><p class=\"muted\">" + esc(t("Your practice's policies. Each one starts as a template: complete the highlighted details, or replace it with your own document. Read each one and confirm you have understood it.")) + "</p></div>" +
+          (isPlatform ? '<div class="actions">' + seg([["practice", t("Practice copies")], ["master", t("Master templates")]], polState.tab) + "</div>" : "") + "</div>" +
           '<div class="banner info"><span>' + esc(t("These are starting templates, not legal advice. Add your own names and details, and have a dental compliance adviser check them against HIW's current requirements.")) + "</span></div>" +
-          (canSign ? '<div class="grid-kpi"><div class="kpi ' + (todo ? "amber" : "green") + '"><div class="label">' + esc(t("Policies to review")) + '</div><div class="value">' + todo + '</div><div class="sub">' + esc(t("{a} of {b} reviewed by you", { a: pols.length - todo, b: pols.length })) + "</div></div></div>" : "") +
+          (!isPlatform || canSign ? "" : "") +
+          '<div class="grid-kpi">' +
+          (canSign ? '<div class="kpi ' + (todo ? "amber" : "green") + '"><div class="label">' + esc(t("Policies to review")) + '</div><div class="value">' + todo + '</div><div class="sub">' + esc(t("{a} of {b} reviewed by you", { a: pols.length - todo, b: pols.length })) + "</div></div>" : "") +
+          '<div class="kpi ' + (toAdopt ? "amber" : "green") + '"><div class="label">' + esc(t("Adopted by the practice")) + '</div><div class="value">' + (pols.length - toAdopt) + ' / ' + pols.length + '</div><div class="sub">' + esc(t("Adopted policies count towards the compliance score and appear under Evidence.")) + "</div></div></div>" +
           '<div class="panel">' + seg([["all", t("All policies")], ["todo", t("To review")], ["done", t("Reviewed")]], polState.filter) +
-          '<div class="table-wrap" style="margin-top:14px"><table class="data"><thead><tr><th>' + esc(t("Policy")) + "</th><th>" + esc(t("Folder")) + "</th><th>" + esc(t("Updated")) + "</th>" + (canSign ? "<th>" + esc(t("You")) + "</th>" : "") + (manage || CC.role() === "group_admin" ? "<th>" + esc(t("Team reviewed")) + "</th>" : "") + "<th></th></tr></thead><tbody>" +
-          rows.map(function (p) {
-            return "<tr><td><strong>" + esc(title(p)) + '</strong><div class="sub">' + esc(p.ref) + " · v" + p.version + "</div></td><td>" + esc(t(p.folder || "")) + "</td><td>" + esc(CC.fmtDate(p.updated_on)) + "</td>" +
+          '<div class="table-wrap" style="margin-top:14px"><table class="data"><thead><tr><th>' + esc(t("Policy")) + "</th><th>" + esc(t("Status")) + "</th><th>" + esc(t("Review due")) + "</th>" + (canSign ? "<th>" + esc(t("You")) + "</th>" : "") + (manage ? "<th>" + esc(t("Team reviewed")) + "</th>" : "") + "<th></th></tr></thead><tbody>" +
+          (rows.length ? rows.map(function (p) {
+            return "<tr><td><strong>" + esc(title(p)) + '</strong><div class="sub">' + esc(p.ref) + " · " + esc(t(p.folder || "")) + " · v" + p.version + "</div></td><td>" + statusCell(p) + "</td><td>" + reviewCell(p) + "</td>" +
               (canSign ? "<td>" + (mineDone(p) ? CC.chip("green", t("Reviewed")) : CC.chip("amber", t("To review"))) + "</td>" : "") +
-              (manage || CC.role() === "group_admin" ? "<td>" + esc(teamCount(p) + " / " + people.length) + "</td>" : "") +
-              '<td class="actions-cell"><button class="btn btn-secondary btn-sm" data-id="' + p.id + '">' + esc(t("Read")) + "</button></td></tr>";
-          }).join("") + "</tbody></table></div></div>";
+              (manage ? "<td>" + esc(teamCount(p) + " / " + people.length) + "</td>" : "") +
+              '<td class="actions-cell"><button type="button" class="btn btn-secondary btn-sm" data-act="read" data-id="' + p.id + '">' + esc(t("Read")) + "</button>" +
+              (editor ? ' <button type="button" class="btn btn-secondary btn-sm" data-act="edit" data-id="' + p.id + '">' + esc(t("Edit")) + "</button>" : "") + "</td></tr>";
+          }).join("") : '<tr><td colspan="6"><div class="empty">' + esc(t("No policies match.")) + "</div></td></tr>") +
+          "</tbody></table></div></div>";
       }
       draw();
+      function reload() { CC.render(); }
+
+      function openRead(p) {
+        var done = canSign && mineDone(p), staffOnly = role === "staff";
+        var m = CC.modal({ title: title(p), wide: true, hideSubmit: !canSign || done, submitLabel: "I have read and understood",
+          body: '<p class="muted small">' + esc(p.ref) + " · " + esc(t(p.folder || "")) + " · v" + p.version + (p.adopted_at ? "" : " · " + esc(t("Template, not yet adopted by the practice"))) + (cy() ? " · " + esc(t("Policy text is in English")) : "") + "</p>" +
+            (p.file_path ? '<div class="pol-viewer" id="pol-viewer"><div class="muted small">' + esc(t("Loading document…")) + "</div></div>" + (staffOnly ? "" : '<p style="margin-top:10px"><button type="button" class="btn btn-secondary btn-sm" id="pol-dl">' + esc(t("Download")) + "</button> <span class=\"small muted\">" + esc(p.file_name || "") + "</span></p>")
+              : '<div class="policy-body">' + polHtml(p.body_en) + "</div>"),
+          onSubmit: function () { return CC.api.policies.review(p.id).then(function () { CC.toast(t("Saved.")); reload(); }); } });
+        if (p.file_path) {
+          CC.api.evidence.url(p.file_path).then(function (url) {
+            var box = m.el.querySelector("#pol-viewer"); if (!box) return;
+            box.innerHTML = isImg(p.file_name) ? '<img alt="" src="' + esc(url) + '" style="max-width:100%;height:auto">'
+              : '<iframe title="' + esc(title(p)) + '" src="' + esc(url) + (staffOnly ? "#toolbar=0&navpanes=0&scrollbar=1" : "") + '" referrerpolicy="no-referrer" style="width:100%;height:60vh;border:0;background:#fff"></iframe>';
+          }).catch(function (e) { var box = m.el.querySelector("#pol-viewer"); if (box) box.textContent = e.message; });
+          var dl = m.el.querySelector("#pol-dl");
+          if (dl) dl.onclick = function () {
+            CC.api.evidence.url(p.file_path, { download: p.file_name || true }).then(function (url) {
+              var a = document.createElement("a"); a.href = url; a.download = p.file_name || "policy"; a.rel = "noopener"; document.body.appendChild(a); a.click(); a.remove();
+            }).catch(CC.fail);
+          };
+        }
+      }
+      function openEdit(p) {
+        var exp = p.expiry_date || addMonths(today(), 12), newer = p.master_version > p.template_version;
+        var m = CC.modal({ title: t("Edit policy") + ": " + title(p), wide: true, submitLabel: "Save and adopt",
+          body: '<p class="muted small">' + esc(p.ref) + " · v" + p.version + " · " + esc(t("Saving adopts this policy for the practice and asks the team to read it again.")) + "</p>" +
+            (newer ? '<div class="banner info"><span>' + esc(t("The master template has been updated since this copy was made. You can keep your version or reset to the latest template.")) + "</span></div>" : "") +
+            (p.file_name ? '<div class="banner info"><span>' + esc(t("An uploaded file is currently shown to the team: {name}. Upload another file to replace it, or tick the box below to use the text instead.", { name: p.file_name })) + "</span></div>" : "") +
+            '<div class="field"><label>' + esc(t("Policy text")) + '</label><textarea name="body" rows="18" style="font-family:inherit;line-height:1.5" ' + (p.file_name ? "" : "required") + ">" + esc(p.body_en || "") + '</textarea><div class="small muted">' + esc(t("Use ## for a heading and - for a bullet point. Details in [square brackets] are placeholders for you to complete.")) + "</div></div>" +
+            '<div class="field"><label>' + esc(t("Or replace the text with your own document (PDF, PNG or JPG, up to 10 MB)")) + '</label><input type="file" name="file" accept=".pdf,.png,.jpg,.jpeg"><div class="small muted">' + esc(t("Staff read uploaded files in the browser and cannot download them. Other roles can download.")) + "</div></div>" +
+            (p.file_name ? '<div class="field checkbox-field"><input type="checkbox" name="removeFile" value="1" id="pol-rm"><label for="pol-rm" style="margin:0;font-weight:500">' + esc(t("Remove the uploaded file and use the text above")) + "</label></div>" : "") +
+            '<div class="field"><label>' + esc(t("Next review due")) + '</label><input type="date" name="expiry_date" value="' + esc(exp) + '" required></div>' +
+            '<p><button type="button" class="btn btn-secondary btn-sm" id="pol-reset">' + esc(t("Reset to the latest template")) + "</button></p>",
+          onSubmit: function (d) {
+            checkPolicyFile(d.file);
+            if (!d.file && !p.file_name && !String(d.body || "").trim()) throw new Error(t("Please enter the policy text or upload a file."));
+            return CC.api.policies.save(p, { body: d.body || "", expiry_date: d.expiry_date, file: d.file, removeFile: !!d.removeFile }).then(function () {
+              CC.api.audit.log("edit_policy", "evidence", p.evidence_id, pid, { title: p.title_en }); CC.toast(t("Saved.")); reload();
+            });
+          } });
+        m.el.querySelector("#pol-reset").onclick = function () {
+          CC.confirm(t("Replace this policy with the latest master template? Your changes and any uploaded file will be removed and the policy will need adopting again."), t("Reset")).then(function (yes) {
+            if (!yes) return;
+            CC.api.policies.reset(p).then(function () { CC.api.audit.log("reset_policy", "evidence", p.evidence_id, pid, { title: p.title_en }); m.close(); CC.toast(t("Saved.")); reload(); }).catch(CC.fail);
+          });
+        };
+      }
       el.onclick = function (e) {
-        var sg = e.target.closest("[data-seg]"); if (sg) { polState.filter = sg.getAttribute("data-seg"); draw(); return; }
-        var b = e.target.closest("[data-id]"); if (!b) return;
+        var sg = e.target.closest("[data-seg]");
+        if (sg) { var v = sg.getAttribute("data-seg"); if (v === "practice" || v === "master") { polState.tab = v; CC.render(); } else { polState.filter = v; draw(); } return; }
+        var b = e.target.closest("[data-act]"); if (!b) return;
         var p = pols.filter(function (x) { return String(x.id) === b.getAttribute("data-id"); })[0]; if (!p) return;
-        var done = canSign && mineDone(p);
-        CC.modal({ title: title(p), wide: true, hideSubmit: !canSign || done, submitLabel: "I have read and understood",
-          body: '<p class="muted small">' + esc(p.ref) + " · " + esc(t(p.folder || "")) + " · v" + p.version + (cy() ? " · " + esc(t("Policy text is in English")) : "") + '</p><div class="policy-body">' + esc(p.body_en || "").replace(/\n/g, "<br>") + "</div>" + (done ? '<p>' + CC.chip("green", t("You reviewed this policy")) + "</p>" : ""),
-          onSubmit: function () { return CC.api.policies.review(p.id).then(function () { CC.toast(t("Saved.")); CC.render(); }); } });
+        if (b.getAttribute("data-act") === "edit") openEdit(p); else openRead(p);
       };
     });
   };
+
+  /* platform admin: the master library that new practices copy from */
+  function drawMaster(el, masters) {
+    function title(p) { return cy() && p.title_cy ? p.title_cy : p.title_en; }
+    el.innerHTML = '<div class="page-head"><div><h1>' + esc(t("Policies")) + "</h1><p class=\"muted\">" + esc(t("Master templates. Every practice has its own copy; editing a master does not change copies that already exist, but practices are told a newer template is available.")) + "</p></div>" +
+      '<div class="actions">' + seg([["practice", t("Practice copies")], ["master", t("Master templates")]], polState.tab) + ' <button type="button" class="btn btn-primary" data-act="new">+ ' + esc(t("New policy")) + "</button></div></div>" +
+      '<div class="panel"><div class="table-wrap"><table class="data"><thead><tr><th>' + esc(t("Policy")) + "</th><th>" + esc(t("Folder")) + "</th><th>" + esc(t("Updated")) + "</th><th></th></tr></thead><tbody>" +
+      masters.map(function (p) { return "<tr><td><strong>" + esc(title(p)) + '</strong><div class="sub">' + esc(p.ref) + " · v" + p.version + "</div></td><td>" + esc(t(p.folder || "")) + "</td><td>" + esc(CC.fmtDate(p.updated_on)) + '</td><td class="actions-cell"><button type="button" class="btn btn-secondary btn-sm" data-act="edit" data-id="' + p.id + '">' + esc(t("Edit")) + "</button></td></tr>"; }).join("") +
+      "</tbody></table></div></div>";
+    function form(p) {
+      p = p || {};
+      return '<div class="cols-2"><div class="field"><label>' + esc(t("Title")) + '</label><input name="title_en" value="' + esc(p.title_en || "") + '" required></div>' +
+        '<div class="field"><label>' + esc(t("Title in Welsh")) + '</label><input name="title_cy" value="' + esc(p.title_cy || "") + '"></div></div>' +
+        '<div class="field"><label>' + esc(t("Folder")) + '</label><input name="folder" value="' + esc(p.folder || "") + '" placeholder="Governance"></div>' +
+        '<div class="field"><label>' + esc(t("Policy text")) + '</label><textarea name="body_en" rows="20" required style="line-height:1.5">' + esc(p.body_en || "") + '</textarea><div class="small muted">' + esc(t("Use ## for a heading and - for a bullet point. {{practice}} becomes the practice name. Details in [square brackets] are for each practice to complete.")) + "</div></div>";
+    }
+    el.onclick = function (e) {
+      var sg = e.target.closest("[data-seg]"); if (sg) { polState.tab = sg.getAttribute("data-seg"); CC.render(); return; }
+      var b = e.target.closest("[data-act]"); if (!b) return;
+      if (b.getAttribute("data-act") === "new") {
+        var nextRef = "POL" + String(masters.reduce(function (n, x) { return Math.max(n, parseInt(String(x.ref).replace(/\D/g, ""), 10) || 0); }, 0) + 1).padStart(2, "0");
+        CC.modal({ title: t("New policy") + " (" + nextRef + ")", wide: true, submitLabel: "Create and copy to every practice", body: form(),
+          onSubmit: function (d) { return CC.api.policies.addMaster({ ref: nextRef, folder: d.folder || null, title_en: d.title_en.trim(), title_cy: d.title_cy || null, body_en: d.body_en }).then(function () { CC.toast(t("Saved.")); CC.render(); }); } });
+      } else {
+        var p = masters.filter(function (x) { return String(x.id) === b.getAttribute("data-id"); })[0]; if (!p) return;
+        CC.modal({ title: t("Edit master template") + ": " + p.ref, wide: true, submitLabel: "Save new version", body: form(p),
+          onSubmit: function (d) { return CC.api.policies.saveMaster(p.id, { folder: d.folder || null, title_en: d.title_en.trim(), title_cy: d.title_cy || null, body_en: d.body_en }).then(function () { CC.toast(t("Saved.")); CC.render(); }); } });
+      }
+    };
+  }
 
   /* ============================== Staff compliance ============================== */
   var scState = { tab: "overview" };
   CC.views.staffcompliance = function (el) {
     var pid = S.practiceId; if (!pid) return noPractice(el);
-    return Promise.all([CC.api.hr.staff.list({ practice_id: pid }), CC.api.checklist.list(pid), CC.api.policies.list(), CC.api.policies.reviews(pid), peopleOf(pid)]).then(function (r) {
+    return Promise.all([CC.api.hr.staff.list({ practice_id: pid }), CC.api.checklist.list(pid), CC.api.policies.list(pid), CC.api.policies.reviews(pid), peopleOf(pid)]).then(function (r) {
       var hrStaff = r[0].filter(function (h) { return h.active !== false; }), rows = r[1], pols = r[2], revs = r[3], profiles = r[4];
       var editor = canManage(), scores = CC.staffScores(hrStaff, rows, pols, revs, profiles);
       var avg = scores.length ? Math.round(scores.reduce(function (s, x) { return s + (x.overall || 0); }, 0) / scores.length) : null;

@@ -5,7 +5,7 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
 let failures = 0, checks = 0;
 function ok(name, cond, extra) { checks++; if (!cond) { failures++; console.log("  FAIL", name, extra || ""); } }
 
-async function newApp(userId, lang) {
+async function newApp(userId, lang, shareFrom) {
   const html = fs.readFileSync(ROOT + "/portal/app.html", "utf8").replace(/<script[\s\S]*?<\/script>/g, "");
   const dom = new JSDOM(html, { runScripts: "outside-only", url: "http://localhost/portal/app.html", pretendToBeVisual: true });
   const w = dom.window, errors = [];
@@ -16,7 +16,8 @@ async function newApp(userId, lang) {
   w.URL.createObjectURL = () => "blob:demo";
   w.print = () => {}; w.open = () => {};
   if (lang) w.localStorage.setItem("cc_lang", lang);
-  const files = ["js/site-config.js", "portal/js/scoring.js", "portal/js/theme.js", "portal/js/core.js","portal/js/hr-core.js", "portal/js/i18n.js","portal/js/i18n-hr.js", "portal/js/i18n-train.js", "portal/js/i18n-tools.js", "portal/js/demo-content.js", "portal/js/tools-content.js", "portal/js/audit-content.js", "portal/js/demo-hr.js", "portal/js/demo-tools.js","portal/js/api-demo.js", "portal/js/api-supabase.js", "portal/js/views-dashboard.js", "portal/js/views-practice.js", "portal/js/views-group.js", "portal/js/views-admin.js", "portal/js/views-hr.js", "portal/js/views-train.js", "portal/js/views-tasks.js", "portal/js/views-compliance.js","portal/js/app.js"];
+  if (shareFrom) { const raw = shareFrom.w.localStorage.getItem("cc_demo_db_v3"); if (raw) w.localStorage.setItem("cc_demo_db_v3", raw); }
+  const files = ["js/site-config.js", "portal/js/scoring.js", "portal/js/theme.js", "portal/js/core.js","portal/js/hr-core.js", "portal/js/i18n.js","portal/js/i18n-hr.js", "portal/js/i18n-train.js", "portal/js/i18n-tools.js", "portal/js/demo-content.js", "portal/js/tools-content.js", "portal/js/policies-content.js", "portal/js/audit-content.js", "portal/js/demo-hr.js", "portal/js/demo-tools.js","portal/js/api-demo.js", "portal/js/api-supabase.js", "portal/js/views-dashboard.js", "portal/js/views-practice.js", "portal/js/views-group.js", "portal/js/views-admin.js", "portal/js/views-hr.js", "portal/js/views-train.js", "portal/js/views-tasks.js", "portal/js/views-compliance.js","portal/js/app.js"];
   for (const f of files) { w.eval(fs.readFileSync(path.join(ROOT, f), "utf8") + "\n//# sourceURL=" + f); if (f === "js/site-config.js") w.CC_CONFIG.FEATURE_PM_AND_VISITS = true; }
   await sleep(60);
   if (userId) { w.document.querySelector(`[data-demo="${userId}"]`).click(); await sleep(150); }
@@ -385,7 +386,7 @@ const ROLES = [["u_admin", "platform_admin"], ["u_ga", "group_admin"], ["u_pr1",
   ok("logs: entries are immutable via API", !A.logs.update && !A.logs.remove);
   let pdenied = false; try { await A.logs.add({ practice_id: "p2", log_type: "fridge", data: {} }); } catch (e) { pdenied = true; } ok("logs: cannot log into another practice", pdenied);
   await go(app, "policies");
-  ok("policies: library listed with to-review count", view(app).querySelectorAll("tbody tr").length === 15 && /Policies to review/.test(view(app).innerHTML));
+  ok("policies: library listed with to-review count", view(app).querySelectorAll("tbody tr").length === 23 && /Policies to review/.test(view(app).innerHTML));
   const toRev = [...view(app).querySelectorAll("tbody tr")].filter(r => /To review/.test(r.innerHTML)).length;
   const firstTodo = [...view(app).querySelectorAll("tbody tr")].find(r => /To review/.test(r.innerHTML)).querySelector("button");
   firstTodo.click(); await sleep(60);
@@ -394,6 +395,74 @@ const ROLES = [["u_admin", "platform_admin"], ["u_ga", "group_admin"], ["u_pr1",
   ok("policies: sign-off reduces to-review count", [...view(app).querySelectorAll("tbody tr")].filter(r => /To review/.test(r.innerHTML)).length === toRev - 1);
   await go(app, "dashboard");
   ok("dashboard: tools summary for staff", /Tasks done on time|Policies to review/.test(view(app).innerHTML));
+  app.dom.window.close();
+
+  // ---- policy templates linked to Evidence ----
+  console.log("\n=== Policy templates");
+  const pa = await newApp("u_pr1", "en"), PA = pa.w.CC.api;
+  const pols = await PA.policies.list("p1");
+  ok("policies: practice has a copy of every policy", pols.length === 23 && pols.every(x => x.evidence_id && x.ref));
+  ok("policies: copies are named for the practice", pols.every(x => !/\{\{practice\}\}/.test(x.body_en)) && /Cardiff Bay Dental/.test(pols[0].body_en + pols[1].body_en + pols[2].body_en));
+  const ins0 = (await PA.practiceInputs("p1")).evidence.length;
+  const target = pols.find(x => !x.adopted_at);
+  await go(pa, "policies");
+  ok("policies: manager sees Edit buttons and template chips", pa.doc.querySelectorAll('[data-act="edit"]').length === 23 && /Template — to adopt/.test(view(pa).innerHTML));
+  pa.doc.querySelector(`[data-act="edit"][data-id="${target.id}"]`).click(); await sleep(80);
+  ok("policies: edit form has text, upload, date and reset", modal(pa).querySelector('textarea[name="body"]') && modal(pa).querySelector('input[type="file"]') && modal(pa).querySelector('input[name="expiry_date"]') && modal(pa).querySelector("#pol-reset"));
+  modal(pa).querySelector('textarea[name="body"]').value = "Our own approved text for this policy.";
+  modal(pa).querySelector("form").dispatchEvent(new pa.w.Event("submit", { cancelable: true })); await sleep(250);
+  const after = (await PA.policies.list("p1")).find(x => x.id === target.id);
+  ok("policies: saving edits and adopts the copy (version raised)", /Our own approved text/.test(after.body_en) && !!after.adopted_at && after.version === target.version + 1);
+  ok("policies: adopted copy now counts towards the score input", (await PA.practiceInputs("p1")).evidence.length === ins0 + 1);
+  const evrows = await PA.evidence.list("p1");
+  ok("policies: the same record appears in Evidence", evrows.some(e => e.policy_id === target.id && e.adopted_at));
+  await go(pa, "evidence");
+  ok("policies: Evidence shows an Open policy action", pa.doc.querySelectorAll('[data-act="policy"]').length >= 23);
+  const up = await PA.policies.save(after, { body: after.body_en, expiry_date: pa.w.CC.isoDate(300), file: { name: "our-policy.pdf" } });
+  const filed = (await PA.policies.list("p1")).find(x => x.id === target.id);
+  ok("policies: uploaded file replaces the text view", filed.file_name === "our-policy.pdf" && filed.version === after.version + 1);
+  await go(pa, "policies");
+  pa.doc.querySelector(`[data-act="read"][data-id="${target.id}"]`).click(); await sleep(150);
+  ok("policies: manager viewer has an iframe and a Download button", !!modal(pa).querySelector("iframe") && !!modal(pa).querySelector("#pol-dl"));
+  pa.doc.querySelector(".modal-overlay [data-close]").click();
+  const sa = await newApp("u_st1", "en", pa); await go(sa, "policies");
+  ok("policies: staff have no Edit buttons", sa.doc.querySelectorAll('[data-act="edit"]').length === 0);
+  sa.doc.querySelector(`[data-act="read"][data-id="${target.id}"]`).click(); await sleep(150);
+  const sm = modal(sa);
+  ok("policies: staff read the uploaded file in the browser with the toolbar hidden", !!sm.querySelector("iframe") && /toolbar=0/.test(sm.querySelector("iframe").getAttribute("src")));
+  ok("policies: staff get no Download button", !sm.querySelector("#pol-dl") && !/Download/.test(sm.innerHTML));
+  let sdeny = false; try { await sa.w.CC.api.policies.save(filed, { body: "x" }); } catch (e) { sdeny = true; } ok("policies: staff cannot save a policy", sdeny);
+  sm.querySelector("form").dispatchEvent(new sa.w.Event("submit", { cancelable: true })); await sleep(200);
+  const srev = await sa.w.CC.api.policies.reviews("p1");
+  ok("policies: staff sign-off is for the practice copy's current version", srev.some(r => r.policy_id === target.id && r.version === filed.version));
+  const other = pols.find(x => x.id !== target.id && x.adopted_at);
+  const pb = await newApp("u_pr1", "en", sa), PB = pb.w.CC.api;
+  await PB.policies.save((await PB.policies.list("p1")).find(x => x.id === other.id), { body: other.body_en + " Updated.", expiry_date: pb.w.CC.isoDate(200) });
+  const sb = await newApp("u_st1", "en", pb);
+  const srev2 = (await sb.w.CC.api.policies.list("p1")).find(x => x.id === other.id);
+  const srevs = await sb.w.CC.api.policies.reviews("p1");
+  ok("policies: a new version asks staff to read it again", !srevs.some(r => r.policy_id === other.id && r.version === srev2.version));
+  await PB.policies.reset((await PB.policies.list("p1")).find(x => x.id === other.id));
+  const rst = (await PB.policies.list("p1")).find(x => x.id === other.id);
+  ok("policies: reset restores the master text and needs adopting again", !rst.adopted_at && rst.body_en.indexOf("Updated.") < 0 && rst.file_name === null);
+  const ga = await newApp("u_ga", "en", pb), GA = ga.w.CC.api;
+  const gp = await GA.policies.list("p1");
+  ok("policies: group admin can read a group practice's policies", gp.length === 23);
+  await GA.policies.save(gp[0], { body: "Group edited text", expiry_date: ga.w.CC.isoDate(100) });
+  ok("policies: group admin can edit a group practice's policy", /Group edited/.test((await GA.policies.list("p1"))[0].body_en));
+  ok("policies: group admin sees nothing for an outside practice", (await GA.policies.list("p4")).length === 0);
+  const ad = await newApp("u_admin", "en", ga), AD = ad.w.CC.api;
+  const masters = await AD.policies.list();
+  ok("policies: platform admin sees the master library", masters.length === 23);
+  await AD.policies.saveMaster(masters[0].id, { body_en: masters[0].body_en + " (master edit)" });
+  const m1 = (await AD.policies.list())[0], c1 = (await AD.policies.list("p1")).find(x => x.id === masters[0].id);
+  ok("policies: master edit raises the version but does not change copies", m1.version === masters[0].version + 1 && c1.body_en.indexOf("(master edit)") < 0 && c1.master_version === m1.version);
+  await AD.policies.addMaster({ ref: "POL99", folder: "Test", title_en: "Test policy", body_en: "Hello {{practice}}" });
+  ok("policies: a new master is copied to every practice", (await AD.policies.list("p1")).length === 24 && (await AD.policies.list("p2")).length === 24);
+  await go(ad, "policies"); ad.doc.querySelector('[data-seg="master"]').click(); await sleep(150);
+  ok("policies: platform admin master tab lists templates", view(ad).querySelectorAll("tbody tr").length === 24);
+  let pdn = false; try { await PB.policies.saveMaster(masters[0].id, { body_en: "x" }); } catch (e) { pdn = true; } ok("policies: only platform admin can edit masters", pdn);
+  [pa, pb, sa, sb, ga, ad].forEach(a => a.dom.window.close());
   app.dom.window.close();
 
   app = await newApp("u_pm1"); A = app.w.CC.api;

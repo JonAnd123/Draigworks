@@ -34,6 +34,11 @@
         });
         el.querySelector("#ev-body").innerHTML = shown.length ? shown.map(function (e) {
           var st = SC.evidenceState(e);
+          if (e.policy_id) {
+            return "<tr><td><strong>" + esc(e.title) + '</strong><div class="small muted">' + esc(e.adopted_at ? (e.file_name || t("Policy text")) : t("Policy template, not yet adopted")) + "</div></td><td>" + esc(CC.catName(e.category)) + "</td><td>—</td><td>" + esc(CC.fmtDate(e.expiry_date)) + "</td><td>" + (e.adopted_at ? CC.evChip(st) : CC.chip("none", t("Template"))) + '</td><td class="actions-cell">' +
+              '<button type="button" class="btn btn-secondary btn-sm" data-act="policy" data-id="' + e.id + '">' + esc(t("Open policy")) + "</button> " +
+              '<button type="button" class="btn btn-secondary btn-sm" data-act="history" data-id="' + e.id + '">' + esc(t("History")) + "</button></td></tr>";
+          }
           return "<tr><td><strong>" + esc(e.title) + '</strong><div class="small muted">' + esc(e.file_name || t("No file")) + "</div></td><td>" + esc(CC.catName(e.category)) + "</td><td>" + esc(e.staff_member ? nameOf(people, e.staff_member) : "—") + "</td><td>" + esc(CC.fmtDate(e.expiry_date)) + "</td><td>" + CC.evChip(st) + "</td><td>v" + e.current_version + '</td><td class="actions-cell">' +
             '<button class="btn btn-secondary btn-sm" data-act="open" data-id="' + e.id + '">' + esc(t("View")) + "</button> " +
             (e.status !== "verified" ? '<button class="btn btn-secondary btn-sm" data-act="verify" data-id="' + e.id + '">' + esc(t("Verify")) + "</button> " : "") +
@@ -57,6 +62,7 @@
         var b = e.target.closest("[data-act]"); if (!b) return;
         var act = b.getAttribute("data-act"), ev = rows.filter(function (x) { return x.id === b.getAttribute("data-id"); })[0];
         if (act === "add") addEvidence(pid, people, load);
+        else if (act === "policy") { location.hash = "#/policies"; }
         else if (act === "open") CC.openFile(ev);
         else if (act === "verify" || act === "reject") {
           var status = act === "verify" ? "verified" : "rejected";

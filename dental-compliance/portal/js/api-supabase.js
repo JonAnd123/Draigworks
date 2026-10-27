@@ -143,8 +143,8 @@
         },
         setStatus: function (id, status) { return sb.from("evidence").update({ status: status }).eq("id", id).then(ok); },
         versions: function (id) { return sb.from("evidence_versions").select("*").eq("evidence_id", id).order("version", { ascending: false }).then(ok); },
-        url: function (path) {
-          return sb.storage.from("evidence").createSignedUrl(path, 120).then(function (r) {
+        url: function (path, opts) {
+          return sb.storage.from("evidence").createSignedUrl(path, 120, opts && opts.download ? { download: opts.download === true ? true : opts.download } : undefined).then(function (r) {
             if (r.error) throw new Error(r.error.message); return r.data.signedUrl;
           });
         }
@@ -249,18 +249,64 @@
         add: function (row) { return sb.from("log_entries").insert(row).select().single().then(ok); }
       },
       policies: {
-        list: function () { return sb.from("policies").select("*").order("ref").then(ok); },
+        /* no practice: the master library. With a practice: that practice's own copies, shaped like master rows
+           (id = master policy id, evidence_id = the linked Evidence record, version = this copy's version) */
+        list: function (pid) {
+          if (!pid) return sb.from("policies").select("*").order("ref").then(ok);
+          return sb.from("evidence").select("*, policies(ref,folder,title_en,title_cy,version,updated_on,body_en)")
+            .eq("practice_id", pid).not("policy_id", "is", null).then(ok).then(function (rows) {
+              return rows.map(function (e) {
+                var m = e.policies || {};
+                return { id: e.policy_id, evidence_id: e.id, practice_id: e.practice_id, ref: m.ref, folder: m.folder, title_en: m.title_en, title_cy: m.title_cy,
+                  body_en: e.body || "", version: e.current_version, template_version: e.template_version, master_version: m.version, master_body: m.body_en,
+                  updated_on: String(e.updated_at || "").slice(0, 10), adopted_at: e.adopted_at, file_path: e.file_path, file_name: e.file_name,
+                  expiry_date: e.expiry_date, status: e.status };
+              }).sort(function (a, b) { return String(a.ref).localeCompare(String(b.ref)); });
+            });
+        },
         reviews: function (pid) { return sb.from("policy_reviews").select("*").eq("practice_id", pid).then(ok); },
         review: function (policyId) {
           return sb.auth.getUser().then(function (u) {
             var uid = u.data.user.id;
             return sb.from("profiles").select("practice_id").eq("id", uid).single().then(ok).then(function (p) {
-              return sb.from("policies").select("version").eq("id", policyId).single().then(ok).then(function (pol) {
-                return sb.from("policy_reviews").upsert({ policy_id: policyId, profile_id: uid, practice_id: p.practice_id, version: pol.version }, { onConflict: "policy_id,profile_id,version", ignoreDuplicates: true }).then(ok);
+              return sb.from("evidence").select("current_version").eq("practice_id", p.practice_id).eq("policy_id", policyId).single().then(ok).then(function (c) {
+                return sb.from("policy_reviews").upsert({ policy_id: policyId, profile_id: uid, practice_id: p.practice_id, version: c.current_version }, { onConflict: "policy_id,profile_id,version", ignoreDuplicates: true }).then(ok);
               });
             });
           });
-        }
+        },
+        /* edit this practice's copy: new text and/or an uploaded file. Saving counts as adopting the policy. */
+        save: function (p, patch) {
+          return (patch.file ? upload(p.practice_id, patch.file) : Promise.resolve(null)).then(function (path) {
+            var v = p.version + 1;
+            var upd = { body: patch.body, current_version: v, adopted_at: new Date().toISOString(), status: "verified", expiry_date: patch.expiry_date || null };
+            if (path) { upd.file_path = path; upd.file_name = patch.file.name; } else if (patch.removeFile) { upd.file_path = null; upd.file_name = null; }
+            return sb.from("evidence").update(upd).eq("id", p.evidence_id).select().single().then(ok).then(function (ev) {
+              return sb.auth.getUser().then(function (u) {
+                return sb.from("evidence_versions").insert({ evidence_id: ev.id, version: v, file_path: ev.file_path, file_name: ev.file_name, expiry_date: ev.expiry_date, body: ev.body, uploaded_by: u.data.user.id }).then(ok).then(function () { return ev; });
+              });
+            });
+          });
+        },
+        /* replace this practice's copy with the latest master text (drops any uploaded file; must be adopted again) */
+        reset: function (p) {
+          return sb.from("practices").select("name").eq("id", p.practice_id).single().then(ok).then(function (pr) {
+            var v = p.version + 1, body = String(p.master_body || "").replace(/\{\{practice\}\}/g, pr.name);
+            return sb.from("evidence").update({ body: body, template_version: p.master_version, current_version: v, adopted_at: null, status: "pending", expiry_date: null, file_path: null, file_name: null })
+              .eq("id", p.evidence_id).select().single().then(ok).then(function (ev) {
+                return sb.auth.getUser().then(function (u) {
+                  return sb.from("evidence_versions").insert({ evidence_id: ev.id, version: v, file_path: null, file_name: null, expiry_date: null, body: ev.body, uploaded_by: u.data.user.id }).then(ok).then(function () { return ev; });
+                });
+              });
+          });
+        },
+        /* platform admin only: edit the master text (raises the version so practices see a newer template) */
+        saveMaster: function (id, patch) {
+          return sb.from("policies").select("version").eq("id", id).single().then(ok).then(function (cur) {
+            return sb.from("policies").update(Object.assign({}, patch, { version: cur.version + 1, updated_on: CC.isoDate(0) })).eq("id", id).select().single().then(ok);
+          });
+        },
+        addMaster: function (row) { return sb.from("policies").insert(row).select().single().then(ok); }
       },
       checklist: {
         list: function (pid) { return sb.from("hr_checklist").select("*").eq("practice_id", pid).then(ok); },

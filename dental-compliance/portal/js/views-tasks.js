@@ -297,7 +297,7 @@
     var manage = canManage() || role === "group_admin";
     Promise.all([
       CC.api.tasks.list(pid).catch(function () { return []; }), CC.api.tasks.completions(pid).catch(function () { return []; }),
-      CC.api.policies.list().catch(function () { return []; }), CC.api.policies.reviews(pid).catch(function () { return []; }),
+      CC.api.policies.list(pid).catch(function () { return []; }), CC.api.policies.reviews(pid).catch(function () { return []; }),
       manage ? CC.api.maintenance.list(pid).catch(function () { return []; }) : Promise.resolve([]),
       CC.api.logs.list(pid, { limit: 200 }).catch(function () { return []; }),
       manage ? CC.api.hr.staff.list({ practice_id: pid }).catch(function () { return []; }) : Promise.resolve([]),

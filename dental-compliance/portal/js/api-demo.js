@@ -157,7 +157,7 @@
   CC.makeDemoApi = function () {
     var db, uid = null;
     function load() {
-      try { var raw = localStorage.getItem(DB_KEY); if (raw) { db = JSON.parse(raw); if (!db.hr_staff && CC.demoHrSeed) { CC.demoHrSeed(db); save(); } if (!db.tasks && CC.demoToolsSeed) { CC.demoToolsSeed(db); save(); } return; } } catch (e) {}
+      try { var raw = localStorage.getItem(DB_KEY); if (raw) { db = JSON.parse(raw); if (!db.hr_staff && CC.demoHrSeed) { CC.demoHrSeed(db); save(); } if (!db.tasks && CC.demoToolsSeed) { CC.demoToolsSeed(db); save(); } if (!db.policy_copies_v2 && CC.demoPoliciesSeed) { CC.demoPoliciesSeed(db); save(); } return; } } catch (e) {}
       db = seed(); save();
     }
     function save() { try { localStorage.setItem(DB_KEY, JSON.stringify(db)); } catch (e) {} }
@@ -245,7 +245,7 @@
         save();
         return ok({
           practice: byId(db.practices, pid),
-          evidence: db.evidence.filter(function (e) { return e.practice_id === pid; }).map(function (e) { return { category: e.category, status: e.status, expiry_date: e.expiry_date }; }),
+          evidence: db.evidence.filter(function (e) { return e.practice_id === pid && (!e.policy_id || e.adopted_at); }).map(function (e) { return { category: e.category, status: e.status, expiry_date: e.expiry_date }; }),
           assessment: done ? { id: done.id, completed_at: done.completed_at, answers: db.answers.filter(function (a) { return a.assessment_id === done.id; }).map(function (a) { return { category: byId(db.questions, a.question_id).category, answer: a.answer }; }) } : null,
           training: db.assignments.filter(function (t) { return t.practice_id === pid; }).map(function (t) { return { kind: byId(db.modules, t.module_id).kind, status: t.status }; }),
           staff_count: db.profiles.filter(function (p) { return p.practice_id === pid && p.active && ["staff", "practice_manager", "principal"].indexOf(p.role) >= 0; }).length,
@@ -302,7 +302,7 @@
           ev.status = status; ev.verified_by = me().id; ev.verified_at = new Date().toISOString(); save(); return ok();
         },
         versions: function (eid) { var ev = byId(db.evidence, eid); if (!ev || !canRead(ev.practice_id)) return ok([]); return ok(db.versions.filter(function (v) { return v.evidence_id === eid; }).sort(function (a, b) { return b.version - a.version; })); },
-        url: function (path) {
+        url: function (path, opts) {
           var blob = new Blob(["Demo document placeholder.\nIn live mode this opens the real uploaded file.\n\n" + path], { type: "text/plain" });
           return Promise.resolve(URL.createObjectURL(blob));
         }

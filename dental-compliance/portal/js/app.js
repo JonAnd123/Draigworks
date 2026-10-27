@@ -16,7 +16,7 @@
     tasks:      { label: "Tasks & calendar",    ico: "📆", scoped: true,  roles: ["principal", "practice_manager", "staff", "group_admin", "platform_admin"] },
     logs:       { label: "Logs",                ico: "📝", scoped: true,  roles: ["principal", "practice_manager", "staff", "platform_admin"] },
     maintenance:{ label: "Maintenance",         ico: "🔧", scoped: true,  roles: ["principal", "practice_manager", "group_admin", "platform_admin"] },
-    policies:   { label: "Policies",            ico: "📄", scoped: true,  roles: ["principal", "practice_manager", "staff"] },
+    policies:   { label: "Policies",            ico: "📄", scoped: true,  roles: ["principal", "practice_manager", "staff", "group_admin", "platform_admin"] },
     staffcompliance: { label: "Staff compliance", ico: "✅", scoped: true, roles: ["principal", "practice_manager", "group_admin", "platform_admin"] },
     audits:     { label: "Audits",              ico: "📋", scoped: true,  roles: ["principal", "practice_manager", "platform_admin"] },
     alerts:     { label: "Alerts",              ico: "🔔", roles: ["principal", "practice_manager", "staff", "group_admin"] },
@@ -39,9 +39,9 @@
     principal:        ["dashboard", "check", "audits", "evidence", "tasks", "logs", "maintenance", "policies", "training", "staffcompliance", "my", "hr", "myhr", "alerts", "bookings", "team", "inspectors", "audit", "settings"],
     practice_manager: ["dashboard", "check", "audits", "evidence", "tasks", "logs", "maintenance", "policies", "training", "staffcompliance", "my", "hr", "myhr", "alerts", "bookings", "team", "audit", "settings"],
     staff:            ["dashboard", "tasks", "logs", "policies", "my", "myhr", "alerts", "settings"],
-    group_admin:      ["group", "grouptrain", "hrgroup", "staffcompliance", "tasks", "maintenance", "alerts", "practices", "bookings", "audit", "settings"],
+    group_admin:      ["group", "grouptrain", "hrgroup", "staffcompliance", "tasks", "maintenance", "policies", "alerts", "practices", "bookings", "audit", "settings"],
     inspector:        ["inspect", "settings"],
-    platform_admin:   ["users", "orgs", "enquiries", "bookings", "dashboard", "evidence", "check", "audits", "tasks", "logs", "maintenance", "staffcompliance", "hr", "audit", "settings"]
+    platform_admin:   ["users", "orgs", "enquiries", "bookings", "dashboard", "evidence", "check", "audits", "tasks", "logs", "maintenance", "policies", "staffcompliance", "hr", "audit", "settings"]
   };
   var OFF_ROUTES = CC.features && CC.features.pmAndVisits ? [] : ["bookings"];
   Object.keys(NAV).forEach(function (r) { NAV[r] = NAV[r].filter(function (id) { return OFF_ROUTES.indexOf(id) < 0; }); });

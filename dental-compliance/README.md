@@ -98,3 +98,13 @@ All themes and the marketing site footer show a "Powered by Draigworks" badge li
 
 - **Draig portal** (`portal/draigworks.html`) opens in the dark theme. Under Settings, Appearance, each user can switch to Light (the Cymru colours). The choice is stored per login (Supabase `user_metadata.theme`; in demo mode, browser storage) and applied after sign-in. `portal/js/theme.js` does the switching; no database change is needed.
 - **Pre-inspection visits and Practice Manager training** are hidden for now. Portal: set `FEATURE_PM_AND_VISITS: true` in `js/site-config.js` to bring them back. Marketing pages: remove the class `later` from the hidden items in `index.html`, `services.html` and `pricing.html`, then run `python3 scripts/build-dw.py`.
+
+## Policies (templates linked to Evidence)
+
+- There are 23 master policy templates (`scripts/policies_src1-3.py`). Run `python3 scripts/build-policies.py` after editing them: it rewrites `supabase/08_policy_templates.sql` and `portal/js/policies-content.js`.
+- Every practice automatically gets its own copy of every policy (database trigger). A copy is an Evidence record in the Policies category, so it shows in both Policies and Evidence. `{{practice}}` in the master is replaced with the practice name; `[square brackets]` are details for the practice to complete.
+- Platform admin edits the masters (Policies, Master templates). Editing a master raises its version; existing copies are not overwritten, practices see "Newer template" and can reset to it.
+- Principal, Practice Manager and Group Admin (for practices in their group) edit a practice's copy, or replace it with an uploaded PDF, PNG or JPG. Saving adopts the policy, sets the next review date and asks staff to read it again.
+- Staff read policies in the browser (an uploaded file opens in an inline viewer with no download button; PDFs open with the toolbar hidden). Other roles can also download. This stops casual downloading but cannot technically stop a determined person saving what is on their screen.
+- A policy copy only counts towards the compliance score once adopted.
+- Database migration: run `supabase/08_policy_templates.sql` once (safe to re-run). Tests: `python3 supabase/tests/setup_db.py && python3 supabase/tests/rls_test.py`.

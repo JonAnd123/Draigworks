@@ -10,10 +10,27 @@
   function rng(seed) { var s = seed; return function () { s = (s * 16807) % 2147483647; return (s - 1) / 2147483646; }; }
   var n = 0; function nid(p) { n++; return p + "_" + n + "_" + Math.random().toString(36).slice(2, 6); }
 
+  /* policy master library + one editable copy per practice (an evidence row with policy_id), mirrors supabase/08 */
+  CC.demoPoliciesSeed = function (db) {
+    db.policies = T.POLICIES.map(function (p, i) { return { id: i + 1, ref: p[0], folder: p[1], title_en: p[2], title_cy: p[3], body_en: p[4], version: 1, updated_on: addD(-60 - i * 9) }; });
+    db.evidence = (db.evidence || []).filter(function (e) { return !e.policy_id; });
+    var adoptN = { p1: 20, p2: 14, p3: 8, p4: 18 };
+    db.practices.forEach(function (pr) {
+      db.policies.forEach(function (m, i) {
+        var adopted = i < (adoptN[pr.id] === undefined ? 6 : adoptN[pr.id]);
+        db.evidence.push({ id: "pol_" + pr.id + "_" + m.id, practice_id: pr.id, category: "policies", title: m.title_en, policy_id: m.id,
+          body: m.body_en.replace(/\{\{practice\}\}/g, pr.name), template_version: 1, current_version: 1,
+          adopted_at: adopted ? ts(-40 - i * 3) : null, status: adopted ? "verified" : "pending", expiry_date: adopted ? addD(330 - i * 9) : null,
+          staff_member: null, file_path: null, file_name: null, uploaded_by: null, verified_by: null, verified_at: null, created_at: ts(-70), updated_at: ts(-40 - i * 3) });
+      });
+    });
+    db.policy_copies_v2 = true;
+  };
+
   /* ---------- seed ---------- */
   CC.demoToolsSeed = function (db) {
     db.tasks = []; db.task_completions = []; db.maintenance = []; db.logs = []; db.policy_reviews = []; db.checklist = [];
-    db.policies = T.POLICIES.map(function (p, i) { return { id: i + 1, ref: p[0], folder: p[1], title_en: p[2], title_cy: p[3], body_en: p[4], version: 1, updated_on: addD(-60 - i * 9) }; });
+    CC.demoPoliciesSeed(db);
 
     // extra audit question sets (HIW questions already present)
     db.questions = db.questions.map(function (q) { return Object.assign({}, q); });
@@ -107,6 +124,12 @@
   CC.makeDemoTools = function (X) {
     var ok = X.ok, deny = X.deny;
     function D() { return X.db(); }
+    function flat(e) {
+      var m = D().policies.filter(function (x) { return x.id === e.policy_id; })[0] || {};
+      return { id: e.policy_id, evidence_id: e.id, practice_id: e.practice_id, ref: m.ref, folder: m.folder, title_en: m.title_en, title_cy: m.title_cy, body_en: e.body || "",
+        version: e.current_version, template_version: e.template_version, master_version: m.version, master_body: m.body_en, updated_on: String(e.updated_at || "").slice(0, 10),
+        adopted_at: e.adopted_at, file_path: e.file_path, file_name: e.file_name, expiry_date: e.expiry_date, status: e.status };
+    }
     function inPractice(pid) { var m = X.me(); return !!m && m.practice_id === pid && ["principal", "practice_manager", "staff"].indexOf(m.role) >= 0; }
     function myHr() { var m = X.me(); if (!m) return null; return D().hr_staff.filter(function (h) { return h.practice_id === m.practice_id && h.active && h.email && h.email.toLowerCase() === m.email.toLowerCase(); })[0] || null; }
 
@@ -194,7 +217,13 @@
       },
 
       policies: {
-        list: function () { return X.me() ? ok(D().policies) : ok([]); },
+        /* no practice: the master library. With a practice: that practice's copies, shaped like master rows */
+        list: function (pid) {
+          if (!X.me()) return ok([]);
+          if (!pid) return ok(D().policies);
+          if (!(X.canRead(pid) || X.isGA(pid))) return ok([]);
+          return ok(D().evidence.filter(function (e) { return e.practice_id === pid && e.policy_id; }).map(flat).sort(function (a, b) { return a.ref.localeCompare(b.ref); }));
+        },
         reviews: function (pid) {
           var me = X.me(); if (!me) return ok([]);
           var rows = D().policy_reviews.filter(function (r) { return r.practice_id === pid; });
@@ -202,11 +231,47 @@
           return ok(rows);
         },
         review: function (policyId) {
-          var me = X.me(), p = D().policies.filter(function (x) { return x.id === policyId; })[0];
-          if (!me || !p || !me.practice_id || ["principal", "practice_manager", "staff"].indexOf(me.role) < 0) return deny();
-          if (D().policy_reviews.some(function (r) { return r.policy_id === policyId && r.profile_id === me.id && r.version === p.version; })) return ok();
-          D().policy_reviews.push({ policy_id: policyId, profile_id: me.id, practice_id: me.practice_id, version: p.version, reviewed_at: new Date().toISOString() });
+          var me = X.me();
+          if (!me || !me.practice_id || ["principal", "practice_manager", "staff"].indexOf(me.role) < 0) return deny();
+          var c = D().evidence.filter(function (e) { return e.policy_id === policyId && e.practice_id === me.practice_id; })[0];
+          if (!c) return deny();
+          if (D().policy_reviews.some(function (r) { return r.policy_id === policyId && r.profile_id === me.id && r.version === c.current_version; })) return ok();
+          D().policy_reviews.push({ policy_id: policyId, profile_id: me.id, practice_id: me.practice_id, version: c.current_version, reviewed_at: new Date().toISOString() });
           X.save(); return ok();
+        },
+        /* edit this practice's copy: new text and/or an uploaded file; counts as adopting it */
+        save: function (p, patch) {
+          var c = X.byId(D().evidence, p.evidence_id), me = X.me();
+          if (!c || !(X.canManage(c.practice_id) || X.isGA(c.practice_id))) return deny();
+          c.body = patch.body; c.current_version++; c.adopted_at = new Date().toISOString(); c.status = "verified"; c.verified_by = me.id; c.verified_at = c.adopted_at;
+          c.expiry_date = patch.expiry_date || null; c.uploaded_by = me.id; c.updated_at = c.adopted_at;
+          if (patch.file) { c.file_name = patch.file.name; c.file_path = c.practice_id + "/demo-policy-" + c.policy_id + "-v" + c.current_version; }
+          else if (patch.removeFile) { c.file_name = null; c.file_path = null; }
+          D().versions.push({ id: nid("v"), evidence_id: c.id, version: c.current_version, file_path: c.file_path, file_name: c.file_name, expiry_date: c.expiry_date, body: c.body, uploaded_by: me.id, created_at: c.updated_at });
+          X.logAudit("edit_policy", "evidence", c.id, c.practice_id, { title: c.title }); X.save(); return ok(flat(c));
+        },
+        reset: function (p) {
+          var c = X.byId(D().evidence, p.evidence_id), m = c && D().policies.filter(function (x) { return x.id === c.policy_id; })[0];
+          if (!c || !m || !(X.canManage(c.practice_id) || X.isGA(c.practice_id))) return deny();
+          var pr = X.byId(D().practices, c.practice_id);
+          c.body = m.body_en.replace(/\{\{practice\}\}/g, pr.name); c.template_version = m.version; c.current_version++; c.adopted_at = null; c.status = "pending"; c.expiry_date = null;
+          c.file_name = null; c.file_path = null; c.updated_at = new Date().toISOString();
+          X.logAudit("reset_policy", "evidence", c.id, c.practice_id, { title: c.title }); X.save(); return ok(flat(c));
+        },
+        saveMaster: function (id, patch) {
+          var m = D().policies.filter(function (x) { return x.id === id; })[0], me = X.me();
+          if (!m || !me || me.role !== "platform_admin") return deny();
+          Object.assign(m, patch); m.version++; m.updated_on = today(); X.save(); return ok(m);
+        },
+        addMaster: function (row) {
+          var me = X.me(); if (!me || me.role !== "platform_admin") return deny();
+          var id = D().policies.reduce(function (n, x) { return Math.max(n, x.id); }, 0) + 1;
+          var m = Object.assign({ id: id, version: 1, updated_on: today(), title_cy: null }, row); D().policies.push(m);
+          D().practices.forEach(function (pr) {
+            D().evidence.push({ id: "pol_" + pr.id + "_" + id, practice_id: pr.id, category: "policies", title: m.title_en, policy_id: id, body: (m.body_en || "").replace(/\{\{practice\}\}/g, pr.name), template_version: 1, current_version: 1,
+              adopted_at: null, status: "pending", expiry_date: null, staff_member: null, file_path: null, file_name: null, uploaded_by: null, verified_by: null, verified_at: null, created_at: new Date().toISOString(), updated_at: new Date().toISOString() });
+          });
+          X.save(); return ok(m);
         }
       },
 

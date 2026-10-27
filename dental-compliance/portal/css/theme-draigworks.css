@@ -175,3 +175,7 @@ code.secret { background: rgba(255,255,255,.08); color: var(--text); }
 
 .pol-field { background: rgba(250,204,21,.22); color: #fde68a; }
 .pol-viewer { background: #0b1016; }
+
+.rte { background: #0b1016; border-color: var(--line); }
+.rte-bar { background: rgba(255,255,255,.04); border-color: var(--line); }
+.rte-area:focus { box-shadow: inset 0 0 0 2px rgba(255,70,88,.4); }

@@ -104,3 +104,11 @@
 };
   Object.keys(add).forEach(function (k) { if (!(k in cy)) cy[k] = add[k]; });
 })();
+(function () {
+  var cy = window.CC_CY = window.CC_CY || {};
+  var add = { "Formatting": "Fformatio", "Style": "Arddull", "Normal text": "Testun arferol", "Title": "Teitl", "Heading": "Pennawd", "Subheading": "Is-bennawd", "Bold": "Trwm", "Italic": "Italig", "Underline": "Tanlinellu",
+    "Bullet list": "Rhestr bwyntiau", "Numbered list": "Rhestr rifedig", "Decrease indent": "Lleihau mewnoliad", "Increase indent": "Cynyddu mewnoliad", "Undo": "Dadwneud", "Redo": "Ailwneud", "Clear formatting": "Clirio fformatio",
+    "Details in [square brackets] are placeholders for you to complete.": "Mae manylion mewn [cromfachau sgwâr] yn dalfeydd i chi eu llenwi.",
+    "{{practice}} becomes the practice name. Details in [square brackets] are for each practice to complete.": "Mae {{practice}} yn dod yn enw'r practis. Mae manylion mewn [cromfachau sgwâr] i bob practis eu llenwi." };
+  Object.keys(add).forEach(function (k) { if (!(k in cy)) cy[k] = add[k]; });
+})();

@@ -432,3 +432,16 @@ html[data-theme="light"] .sidebar .brand-row img[src*="draigworks"] { background
 .pol-viewer { background: var(--slate-100, #eef1f5); border-radius: 10px; min-height: 120px; padding: 8px; }
 .pol-viewer iframe { display: block; border-radius: 6px; }
 textarea[name="body"], textarea[name="body_en"] { width: 100%; min-height: 260px; }
+
+/* Word-style editor */
+.rte { border: 1px solid var(--slate-200, #d9dee5); border-radius: 12px; overflow: hidden; background: #fff; }
+.rte-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; padding: 8px; border-bottom: 1px solid var(--slate-200, #d9dee5); background: var(--slate-50, #f6f8fa); }
+.rte-bar select { width: auto; min-width: 130px; padding: 6px 8px; font-size: .85rem; }
+.rte-btn { min-width: 34px; height: 32px; padding: 0 8px; border: 1px solid transparent; border-radius: 8px; background: transparent; color: inherit; cursor: pointer; font-size: .9rem; }
+.rte-btn:hover { background: rgba(120,130,150,.18); }
+.rte-sep { width: 1px; height: 22px; background: rgba(120,130,150,.35); margin: 0 4px; }
+.rte-area { min-height: 320px; max-height: 55vh; overflow: auto; padding: 14px 16px; outline: none; line-height: 1.55; }
+.rte-area:focus { box-shadow: inset 0 0 0 2px rgba(37,99,235,.35); }
+.policy-body h2 { font-size: 1.25rem; margin: 18px 0 8px; }
+.policy-body h3 { margin: 18px 0 6px; font-size: 1.05rem; }
+.policy-body ol { margin: 0 0 8px; padding-left: 22px; }

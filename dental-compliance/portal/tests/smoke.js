@@ -17,7 +17,7 @@ async function newApp(userId, lang, shareFrom) {
   w.print = () => {}; w.open = () => {};
   if (lang) w.localStorage.setItem("cc_lang", lang);
   if (shareFrom) { const raw = shareFrom.w.localStorage.getItem("cc_demo_db_v3"); if (raw) w.localStorage.setItem("cc_demo_db_v3", raw); }
-  const files = ["js/site-config.js", "portal/js/scoring.js", "portal/js/theme.js", "portal/js/core.js","portal/js/hr-core.js", "portal/js/i18n.js","portal/js/i18n-hr.js", "portal/js/i18n-train.js", "portal/js/i18n-tools.js", "portal/js/demo-content.js", "portal/js/tools-content.js", "portal/js/policies-content.js", "portal/js/audit-content.js", "portal/js/demo-hr.js", "portal/js/demo-tools.js","portal/js/api-demo.js", "portal/js/api-supabase.js", "portal/js/views-dashboard.js", "portal/js/views-practice.js", "portal/js/views-group.js", "portal/js/views-admin.js", "portal/js/views-hr.js", "portal/js/views-train.js", "portal/js/views-tasks.js", "portal/js/views-compliance.js","portal/js/app.js"];
+  const files = ["js/site-config.js", "portal/js/scoring.js", "portal/js/theme.js", "portal/js/core.js","portal/js/hr-core.js", "portal/js/i18n.js","portal/js/i18n-hr.js", "portal/js/i18n-train.js", "portal/js/i18n-tools.js", "portal/js/demo-content.js", "portal/js/tools-content.js", "portal/js/policies-content.js", "portal/js/audit-content.js", "portal/js/demo-hr.js", "portal/js/demo-tools.js","portal/js/api-demo.js", "portal/js/api-supabase.js", "portal/js/views-dashboard.js", "portal/js/views-practice.js", "portal/js/views-group.js", "portal/js/views-admin.js", "portal/js/views-hr.js", "portal/js/views-train.js", "portal/js/views-tasks.js", "portal/js/rich-text.js", "portal/js/views-compliance.js","portal/js/app.js"];
   for (const f of files) { w.eval(fs.readFileSync(path.join(ROOT, f), "utf8") + "\n//# sourceURL=" + f); if (f === "js/site-config.js") w.CC_CONFIG.FEATURE_PM_AND_VISITS = true; }
   await sleep(60);
   if (userId) { w.document.querySelector(`[data-demo="${userId}"]`).click(); await sleep(150); }
@@ -408,11 +408,14 @@ const ROLES = [["u_admin", "platform_admin"], ["u_ga", "group_admin"], ["u_pr1",
   await go(pa, "policies");
   ok("policies: manager sees Edit buttons and template chips", pa.doc.querySelectorAll('[data-act="edit"]').length === 23 && /Template — to adopt/.test(view(pa).innerHTML));
   pa.doc.querySelector(`[data-act="edit"][data-id="${target.id}"]`).click(); await sleep(80);
-  ok("policies: edit form has text, upload, date and reset", modal(pa).querySelector('textarea[name="body"]') && modal(pa).querySelector('input[type="file"]') && modal(pa).querySelector('input[name="expiry_date"]') && modal(pa).querySelector("#pol-reset"));
-  modal(pa).querySelector('textarea[name="body"]').value = "Our own approved text for this policy.";
+  ok("policies: edit form has text, upload, date and reset", modal(pa).querySelector(".rte-area") && modal(pa).querySelector(".rte-bar") && modal(pa).querySelector('input[type="file"]') && modal(pa).querySelector('input[name="expiry_date"]') && modal(pa).querySelector("#pol-reset"));
+  const area = modal(pa).querySelector(".rte-area");
+  ok("policies: editor loads old text as formatted headings and bullets", area.querySelectorAll("h3").length >= 5 && area.querySelectorAll("ul li").length >= 5);
+  area.innerHTML = '<h3>Purpose</h3><p>Our own <strong>approved</strong> text for this policy.</p><script>alert(1)</script><p onclick="x()">Safe</p>'; area.dispatchEvent(new pa.w.Event("input"));
   modal(pa).querySelector("form").dispatchEvent(new pa.w.Event("submit", { cancelable: true })); await sleep(250);
   const after = (await PA.policies.list("p1")).find(x => x.id === target.id);
-  ok("policies: saving edits and adopts the copy (version raised)", /Our own approved text/.test(after.body_en) && !!after.adopted_at && after.version === target.version + 1);
+  ok("policies: saved text keeps bold and headings and strips scripts and attributes", /<strong>approved<\/strong>/.test(after.body_en) && /<h3>Purpose<\/h3>/.test(after.body_en) && !/script|onclick|alert/.test(after.body_en));
+  ok("policies: saving edits and adopts the copy (version raised)", /Our own <strong>approved/.test(after.body_en) && !!after.adopted_at && after.version === target.version + 1);
   ok("policies: adopted copy now counts towards the score input", (await PA.practiceInputs("p1")).evidence.length === ins0 + 1);
   const evrows = await PA.evidence.list("p1");
   ok("policies: the same record appears in Evidence", evrows.some(e => e.policy_id === target.id && e.adopted_at));

@@ -65,19 +65,8 @@
   var polState = { filter: "all", tab: "practice" };
   var POL_FILE_MAX = 10 * 1024 * 1024;
   function canEditPolicies() { var r = CC.role(); return r === "principal" || r === "practice_manager" || r === "platform_admin" || r === "group_admin"; }
-  function polFields(body) { return (String(body || "").match(/\[[^\]\n]{2,80}\]/g) || []).length; }
-  function polHtml(body) {
-    var out = [], list = false;
-    function endList() { if (list) { out.push("</ul>"); list = false; } }
-    String(body || "").split("\n").forEach(function (line) {
-      var l = esc(line).replace(/\[([^\]\n]{2,80})\]/g, '<mark class="pol-field">[$1]</mark>');
-      if (/^## /.test(line)) { endList(); out.push("<h4>" + l.slice(3) + "</h4>"); }
-      else if (/^- /.test(line)) { if (!list) { out.push("<ul>"); list = true; } out.push("<li>" + l.slice(2) + "</li>"); }
-      else if (!line.trim()) { endList(); }
-      else { endList(); out.push("<p>" + l + "</p>"); }
-    });
-    endList(); return out.join("");
-  }
+  function polFields(body) { return CC.rte.fieldCount(body); }
+  function polHtml(body) { return CC.rte.render(body); }
   function isImg(name) { return /\.(png|jpe?g)$/i.test(name || ""); }
   function checkPolicyFile(f) {
     if (!f) return;
@@ -162,18 +151,19 @@
           body: '<p class="muted small">' + esc(p.ref) + " · v" + p.version + " · " + esc(t("Saving adopts this policy for the practice and asks the team to read it again.")) + "</p>" +
             (newer ? '<div class="banner info"><span>' + esc(t("The master template has been updated since this copy was made. You can keep your version or reset to the latest template.")) + "</span></div>" : "") +
             (p.file_name ? '<div class="banner info"><span>' + esc(t("An uploaded file is currently shown to the team: {name}. Upload another file to replace it, or tick the box below to use the text instead.", { name: p.file_name })) + "</span></div>" : "") +
-            '<div class="field"><label>' + esc(t("Policy text")) + '</label><textarea name="body" rows="18" style="font-family:inherit;line-height:1.5" ' + (p.file_name ? "" : "required") + ">" + esc(p.body_en || "") + '</textarea><div class="small muted">' + esc(t("Use ## for a heading and - for a bullet point. Details in [square brackets] are placeholders for you to complete.")) + "</div></div>" +
+            '<div class="field"><label>' + esc(t("Policy text")) + '</label>' + CC.rte.editorHtml("body", p.body_en) + '<div class="small muted">' + esc(t("Details in [square brackets] are placeholders for you to complete.")) + "</div></div>" +
             '<div class="field"><label>' + esc(t("Or replace the text with your own document (PDF, PNG or JPG, up to 10 MB)")) + '</label><input type="file" name="file" accept=".pdf,.png,.jpg,.jpeg"><div class="small muted">' + esc(t("Staff read uploaded files in the browser and cannot download them. Other roles can download.")) + "</div></div>" +
             (p.file_name ? '<div class="field checkbox-field"><input type="checkbox" name="removeFile" value="1" id="pol-rm"><label for="pol-rm" style="margin:0;font-weight:500">' + esc(t("Remove the uploaded file and use the text above")) + "</label></div>" : "") +
             '<div class="field"><label>' + esc(t("Next review due")) + '</label><input type="date" name="expiry_date" value="' + esc(exp) + '" required></div>' +
             '<p><button type="button" class="btn btn-secondary btn-sm" id="pol-reset">' + esc(t("Reset to the latest template")) + "</button></p>",
           onSubmit: function (d) {
             checkPolicyFile(d.file);
-            if (!d.file && !p.file_name && !String(d.body || "").trim()) throw new Error(t("Please enter the policy text or upload a file."));
+            if (!d.file && !p.file_name && CC.rte.isEmpty(d.body)) throw new Error(t("Please enter the policy text or upload a file."));
             return CC.api.policies.save(p, { body: d.body || "", expiry_date: d.expiry_date, file: d.file, removeFile: !!d.removeFile }).then(function () {
               CC.api.audit.log("edit_policy", "evidence", p.evidence_id, pid, { title: p.title_en }); CC.toast(t("Saved.")); reload();
             });
           } });
+        CC.rte.attach(m.el);
         m.el.querySelector("#pol-reset").onclick = function () {
           CC.confirm(t("Replace this policy with the latest master template? Your changes and any uploaded file will be removed and the policy will need adopting again."), t("Reset")).then(function (yes) {
             if (!yes) return;
@@ -204,19 +194,21 @@
       return '<div class="cols-2"><div class="field"><label>' + esc(t("Title")) + '</label><input name="title_en" value="' + esc(p.title_en || "") + '" required></div>' +
         '<div class="field"><label>' + esc(t("Title in Welsh")) + '</label><input name="title_cy" value="' + esc(p.title_cy || "") + '"></div></div>' +
         '<div class="field"><label>' + esc(t("Folder")) + '</label><input name="folder" value="' + esc(p.folder || "") + '" placeholder="Governance"></div>' +
-        '<div class="field"><label>' + esc(t("Policy text")) + '</label><textarea name="body_en" rows="20" required style="line-height:1.5">' + esc(p.body_en || "") + '</textarea><div class="small muted">' + esc(t("Use ## for a heading and - for a bullet point. {{practice}} becomes the practice name. Details in [square brackets] are for each practice to complete.")) + "</div></div>";
+        '<div class="field"><label>' + esc(t("Policy text")) + '</label>' + CC.rte.editorHtml("body_en", p.body_en) + '<div class="small muted">' + esc(t("{{practice}} becomes the practice name. Details in [square brackets] are for each practice to complete.")) + "</div></div>";
     }
     el.onclick = function (e) {
       var sg = e.target.closest("[data-seg]"); if (sg) { polState.tab = sg.getAttribute("data-seg"); CC.render(); return; }
       var b = e.target.closest("[data-act]"); if (!b) return;
       if (b.getAttribute("data-act") === "new") {
         var nextRef = "POL" + String(masters.reduce(function (n, x) { return Math.max(n, parseInt(String(x.ref).replace(/\D/g, ""), 10) || 0); }, 0) + 1).padStart(2, "0");
-        CC.modal({ title: t("New policy") + " (" + nextRef + ")", wide: true, submitLabel: "Create and copy to every practice", body: form(),
-          onSubmit: function (d) { return CC.api.policies.addMaster({ ref: nextRef, folder: d.folder || null, title_en: d.title_en.trim(), title_cy: d.title_cy || null, body_en: d.body_en }).then(function () { CC.toast(t("Saved.")); CC.render(); }); } });
+        var mn = CC.modal({ title: t("New policy") + " (" + nextRef + ")", wide: true, submitLabel: "Create and copy to every practice", body: form(),
+          onSubmit: function (d) { if (CC.rte.isEmpty(d.body_en)) throw new Error(t("Please enter the policy text or upload a file.")); return CC.api.policies.addMaster({ ref: nextRef, folder: d.folder || null, title_en: d.title_en.trim(), title_cy: d.title_cy || null, body_en: d.body_en }).then(function () { CC.toast(t("Saved.")); CC.render(); }); } });
+        CC.rte.attach(mn.el);
       } else {
         var p = masters.filter(function (x) { return String(x.id) === b.getAttribute("data-id"); })[0]; if (!p) return;
-        CC.modal({ title: t("Edit master template") + ": " + p.ref, wide: true, submitLabel: "Save new version", body: form(p),
-          onSubmit: function (d) { return CC.api.policies.saveMaster(p.id, { folder: d.folder || null, title_en: d.title_en.trim(), title_cy: d.title_cy || null, body_en: d.body_en }).then(function () { CC.toast(t("Saved.")); CC.render(); }); } });
+        var mm = CC.modal({ title: t("Edit master template") + ": " + p.ref, wide: true, submitLabel: "Save new version", body: form(p),
+          onSubmit: function (d) { if (CC.rte.isEmpty(d.body_en)) throw new Error(t("Please enter the policy text or upload a file.")); return CC.api.policies.saveMaster(p.id, { folder: d.folder || null, title_en: d.title_en.trim(), title_cy: d.title_cy || null, body_en: d.body_en }).then(function () { CC.toast(t("Saved.")); CC.render(); }); } });
+        CC.rte.attach(mm.el);
       }
     };
   }

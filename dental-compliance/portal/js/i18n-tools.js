@@ -119,3 +119,8 @@
     "Replaces your copy and any uploaded file; the policy must then be adopted again.": "Yn disodli eich copi ac unrhyw ffeil a uwchlwythwyd; yna rhaid mabwysiadu'r polisi eto." };
   Object.keys(add).forEach(function (k) { if (!(k in cy)) cy[k] = add[k]; });
 })();
+(function () {
+  var cy = window.CC_CY = window.CC_CY || {};
+  var add = { "Sort by": "Trefnu yn ôl", "Name (A to Z)": "Enw (A i Z)", "Policy ID": "ID y polisi" };
+  Object.keys(add).forEach(function (k) { if (!(k in cy)) cy[k] = add[k]; });
+})();

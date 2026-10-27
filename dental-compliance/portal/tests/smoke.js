@@ -461,6 +461,11 @@ const ROLES = [["u_admin", "platform_admin"], ["u_ga", "group_admin"], ["u_pr1",
   const m1 = (await AD.policies.list())[0], c1 = (await AD.policies.list("p1")).find(x => x.id === masters[0].id);
   ok("policies: master edit raises the version but does not change copies", m1.version === masters[0].version + 1 && c1.body_en.indexOf("(master edit)") < 0 && c1.master_version === m1.version);
   const pc = await newApp("u_pr1", "en", ad); await go(pc, "policies");
+  const firstTitle = () => view(pc).querySelector("tbody tr strong").textContent;
+  ok("policies: list is sorted by name by default", firstTitle() === "Business continuity policy" && view(pc).querySelector("[data-sort]").value === "name");
+  const ssel = view(pc).querySelector("[data-sort]"); ssel.value = "id"; ssel.dispatchEvent(new pc.w.Event("change", { bubbles: true })); await sleep(60);
+  ok("policies: can sort by policy ID", firstTitle() === "Complaints policy");
+  ssel.value = "name"; ssel.dispatchEvent(new pc.w.Event("change", { bubbles: true }));
   const pbtn = pc.doc.querySelector(`[data-act="preview"][data-id="${masters[0].id}"]`);
   ok("policies: a Preview new template button appears only where the master is newer", !!pbtn && pc.doc.querySelectorAll('[data-act="preview"]').length === 1);
   pbtn.click(); await sleep(100);

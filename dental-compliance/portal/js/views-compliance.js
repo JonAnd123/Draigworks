@@ -62,7 +62,17 @@
      Each practice has its own copy of every policy. A copy is an Evidence record (category "policies"), so it appears
      in both places. It starts as a template; a Principal / Practice Manager (or a Group Admin) edits the text or
      replaces it with an uploaded file. Staff read it in the browser (no download); everyone else can also download. */
-  var polState = { filter: "all", tab: "practice" };
+  var polState = { filter: "all", tab: "practice", sort: "name" };
+  function sortPolicies(list, titleFn) {
+    return list.slice().sort(function (a, b) {
+      if (polState.sort === "id") return String(a.ref).localeCompare(String(b.ref), undefined, { numeric: true });
+      return titleFn(a).localeCompare(titleFn(b), cy() ? "cy" : "en", { sensitivity: "base" });
+    });
+  }
+  function sortSelect() {
+    return '<label class="small muted" style="margin-left:12px">' + esc(t("Sort by")) + ' <select data-sort style="width:auto;display:inline-block;padding:6px 8px">' +
+      '<option value="name"' + (polState.sort === "name" ? " selected" : "") + ">" + esc(t("Name (A to Z)")) + '</option><option value="id"' + (polState.sort === "id" ? " selected" : "") + ">" + esc(t("Policy ID")) + "</option></select></label>";
+  }
   var POL_FILE_MAX = 10 * 1024 * 1024;
   function canEditPolicies() { var r = CC.role(); return r === "principal" || r === "practice_manager" || r === "platform_admin" || r === "group_admin"; }
   function polFields(body) { return CC.rte.fieldCount(body); }
@@ -102,7 +112,7 @@
         return esc(CC.fmtDate(p.expiry_date)) + (d < 0 ? " " + CC.chip("red", t("Overdue")) : (d <= 30 ? " " + CC.chip("amber", t("Due soon")) : ""));
       }
       function draw() {
-        var rows = pols.filter(function (p) { return polState.filter === "all" || (polState.filter === "todo" ? !mineDone(p) : mineDone(p)); });
+        var rows = sortPolicies(pols, title).filter(function (p) { return polState.filter === "all" || (polState.filter === "todo" ? !mineDone(p) : mineDone(p)); });
         el.innerHTML = '<div class="page-head"><div><h1>' + esc(t("Policies")) + "</h1><p class=\"muted\">" + esc(t("Your practice's policies. Each one starts as a template: complete the highlighted details, or replace it with your own document. Read each one and confirm you have understood it.")) + "</p></div>" +
           (isPlatform ? '<div class="actions">' + seg([["practice", t("Practice copies")], ["master", t("Master templates")]], polState.tab) + "</div>" : "") + "</div>" +
           '<div class="banner info"><span>' + esc(t("These are starting templates, not legal advice. Add your own names and details, and have a dental compliance adviser check them against HIW's current requirements.")) + "</span></div>" +
@@ -110,7 +120,7 @@
           '<div class="grid-kpi">' +
           (canSign ? '<div class="kpi ' + (todo ? "amber" : "green") + '"><div class="label">' + esc(t("Policies to review")) + '</div><div class="value">' + todo + '</div><div class="sub">' + esc(t("{a} of {b} reviewed by you", { a: pols.length - todo, b: pols.length })) + "</div></div>" : "") +
           '<div class="kpi ' + (toAdopt ? "amber" : "green") + '"><div class="label">' + esc(t("Adopted by the practice")) + '</div><div class="value">' + (pols.length - toAdopt) + ' / ' + pols.length + '</div><div class="sub">' + esc(t("Adopted policies count towards the compliance score and appear under Evidence.")) + "</div></div></div>" +
-          '<div class="panel">' + seg([["all", t("All policies")], ["todo", t("To review")], ["done", t("Reviewed")]], polState.filter) +
+          '<div class="panel">' + seg([["all", t("All policies")], ["todo", t("To review")], ["done", t("Reviewed")]], polState.filter) + sortSelect() +
           '<div class="table-wrap" style="margin-top:14px"><table class="data"><thead><tr><th>' + esc(t("Policy")) + "</th><th>" + esc(t("Status")) + "</th><th>" + esc(t("Review due")) + "</th>" + (canSign ? "<th>" + esc(t("You")) + "</th>" : "") + (manage ? "<th>" + esc(t("Team reviewed")) + "</th>" : "") + "<th></th></tr></thead><tbody>" +
           (rows.length ? rows.map(function (p) {
             return "<tr><td><strong>" + esc(title(p)) + '</strong><div class="sub">' + esc(p.ref) + " · " + esc(t(p.folder || "")) + " · v" + p.version + "</div></td><td>" + statusCell(p) + "</td><td>" + reviewCell(p) + "</td>" +
@@ -195,6 +205,7 @@
           });
         };
       }
+      el.onchange = function (e) { if (e.target.matches("[data-sort]")) { polState.sort = e.target.value; draw(); } };
       el.onclick = function (e) {
         var sg = e.target.closest("[data-seg]");
         if (sg) { var v = sg.getAttribute("data-seg"); if (v === "practice" || v === "master") { polState.tab = v; CC.render(); } else { polState.filter = v; draw(); } return; }
@@ -209,9 +220,9 @@
   function drawMaster(el, masters) {
     function title(p) { return cy() && p.title_cy ? p.title_cy : p.title_en; }
     el.innerHTML = '<div class="page-head"><div><h1>' + esc(t("Policies")) + "</h1><p class=\"muted\">" + esc(t("Master templates. Every practice has its own copy; editing a master does not change copies that already exist, but practices are told a newer template is available.")) + "</p></div>" +
-      '<div class="actions">' + seg([["practice", t("Practice copies")], ["master", t("Master templates")]], polState.tab) + ' <button type="button" class="btn btn-primary" data-act="new">+ ' + esc(t("New policy")) + "</button></div></div>" +
+      '<div class="actions">' + seg([["practice", t("Practice copies")], ["master", t("Master templates")]], polState.tab) + sortSelect() + ' <button type="button" class="btn btn-primary" data-act="new">+ ' + esc(t("New policy")) + "</button></div></div>" +
       '<div class="panel"><div class="table-wrap"><table class="data"><thead><tr><th>' + esc(t("Policy")) + "</th><th>" + esc(t("Folder")) + "</th><th>" + esc(t("Updated")) + "</th><th></th></tr></thead><tbody>" +
-      masters.map(function (p) { return "<tr><td><strong>" + esc(title(p)) + '</strong><div class="sub">' + esc(p.ref) + " · v" + p.version + "</div></td><td>" + esc(t(p.folder || "")) + "</td><td>" + esc(CC.fmtDate(p.updated_on)) + '</td><td class="actions-cell"><button type="button" class="btn btn-secondary btn-sm" data-act="edit" data-id="' + p.id + '">' + esc(t("Edit")) + "</button></td></tr>"; }).join("") +
+      sortPolicies(masters, title).map(function (p) { return "<tr><td><strong>" + esc(title(p)) + '</strong><div class="sub">' + esc(p.ref) + " · v" + p.version + "</div></td><td>" + esc(t(p.folder || "")) + "</td><td>" + esc(CC.fmtDate(p.updated_on)) + '</td><td class="actions-cell"><button type="button" class="btn btn-secondary btn-sm" data-act="edit" data-id="' + p.id + '">' + esc(t("Edit")) + "</button></td></tr>"; }).join("") +
       "</tbody></table></div></div>";
     function form(p) {
       p = p || {};
@@ -220,6 +231,7 @@
         '<div class="field"><label>' + esc(t("Folder")) + '</label><input name="folder" value="' + esc(p.folder || "") + '" placeholder="Governance"></div>' +
         '<div class="field"><label>' + esc(t("Policy text")) + '</label>' + CC.rte.editorHtml("body_en", p.body_en) + '<div class="small muted">' + esc(t("{{practice}} becomes the practice name. Details in [square brackets] are for each practice to complete.")) + "</div></div>";
     }
+    el.onchange = function (e) { if (e.target.matches("[data-sort]")) { polState.sort = e.target.value; CC.render(); } };
     el.onclick = function (e) {
       var sg = e.target.closest("[data-seg]"); if (sg) { polState.tab = sg.getAttribute("data-seg"); CC.render(); return; }
       var b = e.target.closest("[data-act]"); if (!b) return;
